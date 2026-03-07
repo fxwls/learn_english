@@ -53,3 +53,19 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# ========== 适配单词系统的专属规则 ==========
+# 词库数据文件（运行时生成）
+vocab.dat
+
+# VS Code 编辑器配置（无需提交）
+.vscode/
+
+# Windows 临时文件
+*.tmp
+*.bak
+*.log
+
+# 编译过程中的临时文件
+*.s
+*.ii

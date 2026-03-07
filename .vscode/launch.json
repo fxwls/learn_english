@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++: gcc.exe 构建和调试活动文件",
+      "type": "cppdbg",
+      "request": "launch",
+      // 自动指向当前代码文件生成的exe（无需手动改路径）
+      "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
+      "args": [],
+      "stopAtEntry": false,
+      // 关键：工作目录改为代码所在目录（而非编译器目录）
+      "cwd": "${fileDirname}",
+      "environment": [],
+      // 关键：打开外部控制台（你的程序需要输入/输出交互）
+      "externalConsole": true,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:\\mingw64\\bin\\gdb.exe",
+      "setupCommands": [
+        {
+          "description": "为 gdb 启用整齐打印",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "将反汇编风格设置为 Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      // 关联编译任务（确保调试前先编译）
+      "preLaunchTask": "C/C++: gcc.exe 生成活动文件"
+    }
+  ]
+}
