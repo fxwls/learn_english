@@ -9,6 +9,16 @@
 #define MAX_WORD 2000// 最多存储2000个单词
 #define MAX_STR 100// 每个字符串（英文单词和中文释义）的最大长度
 #define FILE_NAME "vocab.dat"// 数据文件的名称，所有单词信息将保存在这个文件中
+// 艾宾浩斯记忆等级对应的复习间隔（秒），根据记忆等级设置不同的复习间隔时间
+#define LEVEL_0_INTERVAL 300// 记忆等级0的复习间隔为5分钟
+#define LEVEL_1_INTERVAL 1800// 记忆等级1的复习间隔为30分钟
+#define LEVEL_2_INTERVAL 3600// 记忆等级2的复习间隔为1小时
+#define LEVEL_3_INTERVAL 43200// 记忆等级3的复习间隔为12小时
+#define LEVEL_4_INTERVAL 86400// 记忆等级4的复习间隔为1天
+#define LEVEL_5_INTERVAL 172800// 记忆等级5的复习间隔为2天
+#define LEVEL_6_INTERVAL 604800// 记忆等级6的复习间隔为7天
+#define LEVEL_7_INTERVAL 2592000// 记忆等级7的复习间隔为30天
+#define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
 
 //结构体定义
     typedef struct {// 定义一个结构体类型Word，用于存储单词信息
@@ -40,6 +50,15 @@ void load_vocab(); // 从文件中加载单词信息的函数
 int is_duplicate(const char *english); // 检查是否有重复的英文单词的函数
 void add_word(); // 添加新单词到词库中的函数
 
+int get_need_review_count(); // 获取需要复习的单词数量的函数
+void sort_words_by_review(); // 按复习紧迫度排序单词的比较
+void format_time(time_t t, char *buf, int buf_size); // 时间格式化函数，将时间戳转换为可读的日期时间字符串
+void show_word_detail(Word *word); // 显示单词详细信息的函数
+int quiz_word(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
+void update_word_level(Word *word, int is_correct); // 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
+void review_words(); // 复习待复习单词主函数
+
+
 // 主函数
 int main() {
 
@@ -55,10 +74,11 @@ int main() {
     do {
         clear_screen(); // 清屏函数，清除控制台上的内容
         printf("\n============艾宾浩斯单词记忆系统============\n");
-        printf("当前词库单词数: %d\n", g_vocab.count); // 显示当前词库中存储的单词数量
+        printf("当前词库单词数: %d | 待复习单词数: %d\n", g_vocab.count, get_need_review_count()); // 显示当前词库中的单词数量和需要复习的单词数量
         printf("1.录入新单词\n");
-        printf("2.退出系统\n");
-        printf("请输入你的选择(1/2): ");
+        printf("2.复习单词\n");
+        printf("3.退出系统\n");
+        printf("请输入你的选择(1/2/3): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -70,7 +90,10 @@ int main() {
             case 1:// 如果用户选择1，进入录入新单词的流程
                 add_word(); // 调用函数添加新单词到词库中
                 break;
-            case 2:// 如果用户选择2，进入退出系统的流程
+            case 2:// 如果用户选择2，进入复习单词的流程
+                review_words(); // 调用函数进行单词复习
+                break;
+            case 3:// 如果用户选择3，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 printf("数据保存成功！再见！\n");
@@ -80,7 +103,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 2); // 循环直到用户选择退出系统
+    } while (choice != 3); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -238,7 +261,7 @@ int main() {
         strncpy(new_word.chinese, zh, MAX_STR - 1); // 将输入的中文释义复制到新单词的chinese字段
         new_word.level = 0; // 初始化单词记忆等级为0
         new_word.last_review = 0; // 初始化上次复习时间为0
-        new_word.next_review = time(NULL) + 24 * 3600; // 设置下次复习时间为当前时间加上24小时
+        new_word.next_review = time(NULL) - 100; // 设置下次复习时间为当前时间减去100秒，表示新单词需要立即复习
         new_word.correct_count = 0; // 初始化正确记忆次数为0
         new_word.wrong_count = 0; // 初始化错误记忆次数为0
 
@@ -250,4 +273,169 @@ int main() {
         save_vocab(); // 保存当前的单词信息到文件中
         printf("按回车键继续...");
         getchar(); // 等待用户按下回车键继续操作
+
+        
+   } 
+    
+   
+    int get_need_review_count() {// 获取需要复习的单词数量的函数
+        int count = 0;
+        time_t now = time(NULL);// 获取当前时间
+        for (int i = 0; i < g_vocab.count; i++) {// 遍历当前存储的单词信息数组
+            if (g_vocab.words[i].next_review <= now) {// 如果单词的下次复习时间小于或等于当前时间，说明需要复习
+            count++;
+            } 
+        }
+        return count;
     }
+
+    
+    void sort_words_by_review() {// 按复习紧迫度排序单词的比较函数（冒泡排序使用）
+        if (g_vocab.count <= 1) return; // 如果单词数量小于或等于1，不需要排序
+
+        for (int i = 0; i < g_vocab.count - 1; i++) {// 外层循环控制排序的轮数，每轮将一个单词放到正确的位置
+            for (int j = 0; j < g_vocab.count - i - 1; j++) {// 内层循环比较相邻的单词，根据下次复习时间的紧迫度进行排序
+                if (g_vocab.words[j].next_review > g_vocab.words[j+1].next_review) {// 如果当前单词的下次复习时间大于下一个单词的下次复习时间，说明下一个单词需要更紧迫地复习，交换它们的位置
+                    Word temp = g_vocab.words[j];// 定义一个临时变量temp来存储当前单词的信息
+                    g_vocab.words[j] = g_vocab.words[j+1];// 将下一个单词的信息复制到当前单词的位置
+                    g_vocab.words[j+1] = temp; // 将临时变量temp中的当前单词信息复制到下一个单词的位置，完成交换
+                }
+            }
+        }
+    }
+
+    
+    void format_time(time_t t, char *buf, int buf_size) {// 时间格式化函数，将时间戳转换为可读的日期时间字符串
+        if (t == 0) {// 如果时间戳为0，表示单词还没有被复习过，返回"未复习"
+            strncpy(buf, "未复习", buf_size - 1);
+            buf[buf_size -1] = '\0';
+            return;
+        }
+        struct tm *tm_info = localtime(&t);// 将时间戳转换为本地时间的结构体tm_info
+        strftime(buf, buf_size, "%Y-%m-%d %H:%M:%S", tm_info);// 将tm_info中的时间信息格式化为"年-月-日 时:分:秒"的字符串，并存储在buf中
+    }
+
+    
+    void show_word_detail(Word *word) {// 显示单词详细信息的函数
+        char last_review_str[30], next_review_str[30];// 定义两个字符串变量，用于存储格式化后的上次复习时间和下次复习时间
+        format_time(word->last_review, last_review_str, sizeof(last_review_str)); // 将单词的上次复习时间格式化为可读的字符串
+        format_time(word->next_review, next_review_str, sizeof(next_review_str)); // 将单词的下次复习时间格式化为可读的字符串
+        
+        printf("\n===单词详情===\n");
+        printf("ID: %d\n", word->id); // 显示单词ID
+        printf("英文: %s\n", word->english); // 显示英文单词
+        printf("中文: %s\n", word->chinese); // 显示中文
+        printf("记忆等级: %d (最高7级)\n", word->level); // 显示单词记忆等级
+        printf("上次复习: %s\n", last_review_str); // 显示单词的上次复习时间
+        printf("下次复习: %s\n", next_review_str); // 显示单词的下次复习时间
+        printf("正确次数：%d | 错误次数：%d\n", word->correct_count, word->wrong_count); // 显示单词的正确记忆次数和错误记忆次数
+    }
+
+    
+    int quiz_word(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
+        if (word == NULL) return 0;
+
+        char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的英文单词
+        printf("\n【测试】请输入“%s”的英文：", word->chinese); // 提示用户输入单词的英文
+        safe_input(input,MAX_STR); // 获取用户输入的英文单词
+
+        // 忽略大小写比较
+        if (strcasecmp_custom(input, word->english) == 0) {// 如果用户输入的英文单词与单词的英文字段匹配，提示用户回答正确并返回1表示正确
+            printf("回答正确！\n");
+            return 1; // 如果用户输入的英文单词与单词的英文字段匹配，返回1表示正确
+        } else {
+            printf("回答错误！正确答案是：%s\n", word->english); // 如果用户输入的英文单词与单词的英文字段不匹配，提示用户正确答案并返回0表示错误
+            return 0;
+        }
+    }
+
+    
+    void update_word_level(Word *word, int is_correct) {// 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
+        if (word == NULL) return;
+
+        time_t now = time(NULL);// 获取当前时间
+        word->last_review = now;// 更新单词的上次复习时间为当前时间
+
+        if (is_correct) {
+            word->correct_count++;// 如果用户回答正确，增加单词的正确记忆次数
+            if (word->level < MAX_LEVEL) {// 如果单词的记忆等级小于最大等级，增加单词的记忆等级
+                word->level++;
+            }
+
+            switch (word->level) {// 根据单词的记忆等级设置下次复习时间，使用预定义的复习间隔常量
+                case 0: word->next_review = now + LEVEL_0_INTERVAL; break;
+                case 1: word->next_review = now + LEVEL_1_INTERVAL; break;
+                case 2: word->next_review = now + LEVEL_2_INTERVAL; break;
+                case 3: word->next_review = now + LEVEL_3_INTERVAL; break;
+                case 4: word->next_review = now + LEVEL_4_INTERVAL; break;
+                case 5: word->next_review = now + LEVEL_5_INTERVAL; break;
+                case 6: word->next_review = now + LEVEL_6_INTERVAL; break;
+                case 7: word->next_review = now + LEVEL_7_INTERVAL; break;
+            }
+        } else {
+            word->wrong_count++;// 如果用户回答错误，增加单词的错误记忆次数
+            if (word->level > 0) {
+                word->level--;
+            }
+            word->next_review = now + LEVEL_0_INTERVAL; // 错误时立即安排下一次复习，间隔为5分钟
+        }
+    }
+
+    
+    void review_words() {// 复习待复习单词主函数
+        clear_screen();
+        printf("\n=======单词复习=======\n");
+
+        int need_review = get_need_review_count();
+        if (need_review == 0) {
+            printf("当前暂无需要复习的单词！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        printf("待复习单词数量：%d\n", need_review);
+        printf("按回车键开始复习...");
+        getchar();
+
+        sort_words_by_review(); // 按复习紧迫度排序单词，确保最需要复习的单词优先出现
+
+        int reviewed = 0, correct = 0;
+        time_t now = time(NULL);
+
+        // 遍历所有单词，复习需要复习的单词
+        for (int i = 0; i <g_vocab.count; i++) {
+            Word *word = &g_vocab.words[i];
+            if (word->next_review > now) continue; 
+
+            clear_screen();
+            printf("【复习进度】%d/%d\n", reviewed + 1, need_review);
+
+            // 进行单词测试，获取用户的测试结果
+            int is_correct = quiz_word(word);
+            if (is_correct) correct++;
+            reviewed++;
+        
+            // 更新单词状态
+            update_word_level(word, is_correct);
+        
+
+            printf("\n按回车键继续复习（输入q退出复习）...");
+            char quit[10];
+            safe_input(quit, sizeof(quit));
+            if (strcasecmp_custom(quit, "q") == 0) {
+                break; // 如果用户输入q，退出复习循环
+            }
+
+        }
+
+        // 保存复习后的状态
+        save_vocab();
+        printf("\n复习完成！本次复习：%d个单词，正确率%.2f%%\n", reviewed, (reviewed > 0) ? (correct * 100.0 / reviewed) : 0);
+        printf("按回车键返回主菜单...");
+        getchar();
+    }
+
+
+
+
