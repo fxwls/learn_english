@@ -52,6 +52,7 @@ void add_word(); // 添加新单词到词库中的函数
 
 int get_need_review_count(); // 获取需要复习的单词数量的函数
 void sort_words_by_review(); // 按复习紧迫度排序单词的比较
+int compare_word_by_review(const void *a, const void *b); // 按复习紧迫度排序单词的比较函数（用于qsort函数）
 void format_time(time_t t, char *buf, int buf_size); // 时间格式化函数，将时间戳转换为可读的日期时间字符串
 void show_word_detail(Word *word); // 显示单词详细信息的函数
 int quiz_word(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
@@ -290,18 +291,18 @@ int main() {
     }
 
     
-    void sort_words_by_review() {// 按复习紧迫度排序单词的比较函数（冒泡排序使用）
+    void sort_words_by_review() {// 按复习紧迫度排序单词的比较函数（快速排序使用）
         if (g_vocab.count <= 1) return; // 如果单词数量小于或等于1，不需要排序
 
-        for (int i = 0; i < g_vocab.count - 1; i++) {// 外层循环控制排序的轮数，每轮将一个单词放到正确的位置
-            for (int j = 0; j < g_vocab.count - i - 1; j++) {// 内层循环比较相邻的单词，根据下次复习时间的紧迫度进行排序
-                if (g_vocab.words[j].next_review > g_vocab.words[j+1].next_review) {// 如果当前单词的下次复习时间大于下一个单词的下次复习时间，说明下一个单词需要更紧迫地复习，交换它们的位置
-                    Word temp = g_vocab.words[j];// 定义一个临时变量temp来存储当前单词的信息
-                    g_vocab.words[j] = g_vocab.words[j+1];// 将下一个单词的信息复制到当前单词的位置
-                    g_vocab.words[j+1] = temp; // 将临时变量temp中的当前单词信息复制到下一个单词的位置，完成交换
-                }
-            }
-        }
+        qsort(g_vocab.words, g_vocab.count, sizeof(Word), compare_word_by_review); // 使用标准库函数qsort对单词信息数组进行排序，按照复习紧迫度排序
+    }
+
+    int compare_word_by_review(const void *a, const void *b) {// 按复习紧迫度排序单词的比较函数（用于qsort函数）
+        const Word *word1 = (const Word *)a;
+        const Word *word2 = (const Word *)b;
+        if (word1->next_review < word2->next_review) return -1;// 如果第一个单词的下次复习时间小于第二个单词的下次复习时间，返回-1表示第一个单词需要更紧迫地复习
+        if (word1->next_review > word2->next_review) return 1;// 如果第一个单词的下次复习时间大于第二个单词的下次复习时间，返回1表示第二个单词需要更紧迫地复习
+        return 0;
     }
 
     
