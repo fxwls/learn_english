@@ -137,6 +137,9 @@ int main() {
         if (fgets(buf, size, stdin) == NULL)// 使用fgets函数读取输入，如果输入失败，返回NULL
             return 0; // 如果输入失败，返回0
         trim_newline(buf); // 去除输入字符串末尾的换行符
+       if (strlen(buf) == 0) {
+            return 0; // 如果输入的字符串长度为0，返回0表示输入无效
+       }
         return 1; // 输入成功，返回1
     }
 
@@ -268,7 +271,9 @@ int main() {
         Word new_word = {0}; // 定义一个新的Word结构体变量，并将其所有字段初始化为0
         new_word.id = g_vocab.count + 1; // 设置单词ID为当前单词数量加1
         strncpy(new_word.english, en, MAX_STR - 1); // 将输入的英文单词复制到新单词的english字段
+        new_word.english[MAX_STR - 1] = '\0'; // 确保字符串以null结尾，防止溢出
         strncpy(new_word.chinese, zh, MAX_STR - 1); // 将输入的中文释义复制到新单词的chinese字段
+        new_word.chinese[MAX_STR - 1] = '\0'; // 确保字符串以null结尾，防止溢出
         new_word.level = 0; // 初始化单词记忆等级为0
         new_word.last_review = 0; // 初始化上次复习时间为0
         new_word.next_review = time(NULL) - 100; // 设置下次复习时间为当前时间减去100秒，表示新单词需要立即复习
@@ -355,6 +360,10 @@ int main() {
         printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
         safe_input(input, MAX_STR); // 获取用户输入的英文单词
 
+        while (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
+            printf("输入不能为空，请重新输入！\n");
+        }
+
         if (strcasecmp_custom(input,word->english) == 0) {
             printf("回答正确！\n");
             return 1; // 如果用户输入的英文单词与单词的英文字段匹配，返回1表示正确
@@ -368,6 +377,10 @@ int main() {
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的中文释义
         printf("\n【英译中】%s\n", word->english); // 提示用户输入单词的中文释义
         safe_input(input, MAX_STR); // 获取用户输入的中文释义
+
+        while (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
+            printf("输入不能为空，请重新输入！\n");
+        }
 
         if (strcasecmp_custom(input,word->chinese) == 0) {
             printf("回答正确！\n");
