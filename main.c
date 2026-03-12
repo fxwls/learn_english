@@ -21,21 +21,27 @@
 #define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
 
 //结构体定义
-    typedef struct {// 定义一个结构体类型Word，用于存储单词信息
-        int id;// 单词ID，唯一标识每个单词
-        char english[MAX_STR];// 英文单词
-        char chinese[MAX_STR];// 中文释义
-        int level;// 单词记忆等级，用于表示单词的熟悉程度
-        time_t last_review;// 上次复习时间，记录单词上次被复习的时间
-        time_t next_review;// 下次复习时间，记录单词下次需要复习的时间
-        int correct_count;// 正确记忆次数，记录用户正确记忆该单词的次数
-        int wrong_count;// 错误记忆次数，记录用户错误记忆该单词的次数
-    } Word;
+typedef struct {// 定义一个结构体类型Word，用于存储单词信息
+    int id;// 单词ID，唯一标识每个单词
+    char english[MAX_STR];// 英文单词
+    char chinese[MAX_STR];// 中文释义
+    int level;// 单词记忆等级，用于表示单词的熟悉程度
+    time_t last_review;// 上次复习时间，记录单词上次被复习的时间
+    time_t next_review;// 下次复习时间，记录单词下次需要复习的时间
+    int correct_count;// 正确记忆次数，记录用户正确记忆该单词的次数
+    int wrong_count;// 错误记忆次数，记录用户错误记忆该单词的次数
+} Word;
     
-    typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库的信息
-        Word words[MAX_WORD];// 存储单词信息的数组，最多可以存储2000个单词
-        int count;// 当前存储的单词数量，记录已经存储了多少个单词
-    } Vocab;
+typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库的信息
+    Word words[MAX_WORD];// 存储单词信息的数组，最多可以存储2000个单词
+    int count;// 当前存储的单词数量，记录已经存储了多少个单词
+} Vocab;
+
+typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的模式
+    MODE_CN_TO_EN, // 中译英测试模式
+    MODE_EN_TO_CN  // 英译中测试模式  
+} TestMode;
+TestMode current_test_mode = MODE_CN_TO_EN; // 当前的测试模式，默认为中译英测试模式
 
 // 全局变量
     Vocab g_vocab = {.count = 0};// 全局变量，存储当前的单词信息，初始化单词数量为0, 显性初始化结构体，确保所有字段都被正确初始化
@@ -55,9 +61,12 @@ void sort_words_by_review(); // 按复习紧迫度排序单词的比较
 int compare_word_by_review(const void *a, const void *b); // 按复习紧迫度排序单词的比较函数（用于qsort函数）
 void format_time(time_t t, char *buf, int buf_size); // 时间格式化函数，将时间戳转换为可读的日期时间字符串
 void show_word_detail(Word *word); // 显示单词详细信息的函数
-int quiz_word(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
+int quiz_word(Word *word); // 单词测试函数，根据当前的测试模式调用相应的测试函数进行单词测试，返回1表示用户回答正确，返回0表示用户回答错误
+int quiz_cn_to_en(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
+int quiz_en_to_cn(Word *word); // 单词测试（英译中），返回1=正确，0=错误的函数
 void update_word_level(Word *word, int is_correct); // 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
 void review_words(); // 复习待复习单词主函数
+void select_test_mode(); // 选择测试模式的函数，允许用户选择中译英测试还是英译中测试
 
 
 // 主函数
@@ -333,19 +342,38 @@ int main() {
     }
 
     
-    int quiz_word(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
-        if (word == NULL) return 0;
+    int quiz_word(Word *word) {// 单词测试函数，根据当前的测试模式调用相应的测试函数进行单词测试，返回1表示用户回答正确，返回0表示用户回答错误
+        if (current_test_mode == MODE_EN_TO_CN) {
+            return quiz_en_to_cn(word); // 如果当前测试模式是英译中，调用quiz_en_to_cn函数进行测试
+        } else {
+            return quiz_cn_to_en(word); // 如果当前测试模式是中译英，调用quiz_cn_to_en函数进行测试
+        }
+    }
 
+    int quiz_cn_to_en(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的英文单词
-        printf("\n【测试】请输入“%s”的英文：", word->chinese); // 提示用户输入单词的英文
-        safe_input(input,MAX_STR); // 获取用户输入的英文单词
+        printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
+        safe_input(input, MAX_STR); // 获取用户输入的英文单词
 
-        // 忽略大小写比较
-        if (strcasecmp_custom(input, word->english) == 0) {// 如果用户输入的英文单词与单词的英文字段匹配，提示用户回答正确并返回1表示正确
+        if (strcasecmp_custom(input,word->english) == 0) {
             printf("回答正确！\n");
             return 1; // 如果用户输入的英文单词与单词的英文字段匹配，返回1表示正确
         } else {
             printf("回答错误！正确答案是：%s\n", word->english); // 如果用户输入的英文单词与单词的英文字段不匹配，提示用户正确答案并返回0表示错误
+            return 0;
+        }
+    }
+
+    int quiz_en_to_cn(Word *word) {// 单词测试（英译中），返回1=正确，0=错误的函数
+        char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的中文释义
+        printf("\n【英译中】%s\n", word->english); // 提示用户输入单词的中文释义
+        safe_input(input, MAX_STR); // 获取用户输入的中文释义
+
+        if (strcasecmp_custom(input,word->chinese) == 0) {
+            printf("回答正确！\n");
+            return 1; // 如果用户输入的中文释义与单词的中文字段匹配，返回1表示正确
+        } else {
+            printf("回答错误！正确答案是：%s\n", word->chinese); // 如果用户输入的中文释义与单词的中文字段不匹配，提示用户正确答案并返回0表示错误
             return 0;
         }
     }
@@ -396,6 +424,7 @@ int main() {
         }
 
         printf("待复习单词数量：%d\n", need_review);
+        select_test_mode(); // 选择测试模式，允许用户选择中译英测试还是英译中测试
         printf("按回车键开始复习...");
         getchar();
 
@@ -436,6 +465,30 @@ int main() {
         printf("按回车键返回主菜单...");
         getchar();
     }
+
+    void select_test_mode() {// 选择测试模式的函数，允许用户选择中译英测试还是英译中测试
+        int choice;
+        printf("\n请选择测试模式：\n");
+        printf("1. 中译英测试\n");
+        printf("2. 英译中测试\n");
+        printf("请输入你的选择(1/2): ");
+
+        if (scanf("%d", &choice) != 1 ) {
+            choice = 0;
+            while (getchar() != '\n');
+        }
+        getchar(); // 清除输入缓冲区中的换行符
+
+        if (choice == 2) {
+            current_test_mode = MODE_EN_TO_CN; // 设置测试模式为英译中
+        } else if (choice == 1) {
+            current_test_mode = MODE_CN_TO_EN; // 默认设置测试模式为中译英
+        } else {
+            printf("无效的选择，默认使用中译英测试模式！\n");
+             current_test_mode = MODE_CN_TO_EN; // 如果用户输入无效，默认设置测试模式为中译英
+        }
+    }
+
 
 
 
