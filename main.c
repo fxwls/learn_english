@@ -30,6 +30,7 @@ typedef struct {// 定义一个结构体类型Word，用于存储单词信息
     time_t next_review;// 下次复习时间，记录单词下次需要复习的时间
     int correct_count;// 正确记忆次数，记录用户正确记忆该单词的次数
     int wrong_count;// 错误记忆次数，记录用户错误记忆该单词的次数
+    int is_mistake;// 错题判断
 } Word;
     
 typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库的信息
@@ -72,6 +73,8 @@ void select_test_mode(); // 选择测试模式的函数，允许用户选择中�
 void show_review_rank();//复习排行榜
 int compare_word_ptr_by_review(const void *a, const void *b);//比较函数
 
+void review_mistakes();// 专项复习错题
+
 // 主函数
 int main() {
 
@@ -91,8 +94,9 @@ int main() {
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
         printf("3.查看待复习排行榜\n");
-        printf("4.退出系统\n");
-        printf("请输入你的选择(1/2/3/4): ");
+        printf("4.专项复习错题\n");
+        printf("5.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -110,7 +114,10 @@ int main() {
             case 3:// 如果用户选择3，打开复习排行榜
                 show_review_rank();
                 break;
-            case 4:// 如果用户选择4，进入退出系统的流程
+            case 4:// 如果用户选择4，打开专项复习错题
+                review_mistakes();
+                break;
+            case 5:// 如果用户选择5，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 printf("数据保存成功！再见！\n");
@@ -120,7 +127,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 4); // 循环直到用户选择退出系统
+    } while (choice != 5); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -435,6 +442,7 @@ int main() {
             }
         } else {
             word->wrong_count++;// 如果用户回答错误，增加单词的错误记忆次数
+            word->is_mistake = 1;
             if (word->level > 0) {
                 word->level--;
             }
@@ -600,7 +608,7 @@ int main() {
                         printf("已经是最后一页了！按回车继续...\n");
                         getchar();// 等待用户按回车
                     }
-                } else if (choice == 'p' || choice == 'p'){
+                } else if (choice == 'p' || choice == 'P'){
                     if (current_page > 1) current_page--;
                     else {
                         printf("已经是第一页了！按回车继续...\n");
@@ -623,5 +631,66 @@ int main() {
         return 0;
     }
 
+    void review_mistakes() {
+        clear_screen();
+        printf("\n=======专项复习错题本======\n");
 
+        // 统计错题数量
+        int mistake_count = 0;
+        for (int i = 0; i < g_vocab.count; i++) {
+            if (g_vocab.words[i].is_mistake == 1) {
+                mistake_count++;
+            }
+        }
+        if (mistake_count == 0) {
+            printf("当前没有需要复习的错题，恭喜！\n");
+            printf("按回车键返回主菜单...\n");
+            getchar();
+            return;
+        }
 
+        printf("待复习错题数量:%d\n", mistake_count);
+        select_test_mode(); // 选择测试模式，允许用户选择中译英测试还是英译中测试
+        printf("按回车键开始复习...\n");
+        getchar();
+
+        // 为了方便，我们按照单词ID的顺序复习错题
+        int reviewed = 0, correct = 0;
+        for (int i = 0; i < g_vocab.count; i++) {
+            Word *word = &g_vocab.words[i];
+            if (word->is_mistake != 1) {
+                continue;
+            }
+
+            clear_screen();
+            printf("【错题复习进度】%d/%d\n", reviewed + 1, mistake_count);
+
+            // 进行测试
+            int is_correct = quiz_word(word);
+            if (is_correct) {
+                correct++;
+                // 答对了，标记为已复习
+                word->is_mistake = 0;
+                // 同时可以正常更新记忆等级
+                update_word_level(word, 1);
+            } else {
+                // 答错了，依然保留在错题本，但也要更新记忆等级（下降）
+                update_word_level(word, 0);
+            }
+            reviewed++;
+
+            // 按回车键继续复习
+            printf("按回车键继续复习(输入q退出)...\n");
+            char quit[10];
+            safe_input(quit, sizeof(quit));
+            if (strcasecmp_custom(quit, "q") == 0) {
+                break;
+            }   
+        }
+        
+        // 保存更改
+        save_vocab();
+        printf("\n错题复习完成！本次复习：%d个单词，正确率：%.2f%%\n", reviewed,(reviewed > 0) ? (correct * 100.0 / reviewed) : 0.0);
+        printf("按回车键返回主菜单...\n");
+        getchar();
+    }
