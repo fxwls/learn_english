@@ -602,19 +602,19 @@ int main() {
                 while (getchar() != '\n');// 清除输入缓冲区
                 choice = tolower(choice); // 转为小写
 
-                if (choice == 'n' || choice == 'N') {
+                if (choice == 'n' ) {
                     if (current_page < total_pages) current_page++;
                     else{
                         printf("已经是最后一页了！按回车继续...\n");
                         getchar();// 等待用户按回车
                     }
-                } else if (choice == 'p' || choice == 'P'){
+                } else if (choice == 'p' ){
                     if (current_page > 1) current_page--;
                     else {
                         printf("已经是第一页了！按回车继续...\n");
                         getchar();// 等待用户按回车
                     }
-                } else if (choice == 'q' || choice == 'Q') {
+                } else if (choice == 'q' ) {
                     break;
                 } else {
                     printf("无效输入，按回车继续...");
