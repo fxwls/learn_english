@@ -245,8 +245,11 @@ int main() {
     int is_valid_english(const char *word) {// 检查英文单词是否只包含英文字母的函数
         if (word == NULL || strlen(word) == 0) return 0;
         for (int i = 0; word[i] != '\0'; i++) {
-            if (!isalpha((unsigned char)word[i])) return 0;  // 如果包含非字母字符，返回0
-        }
+            unsigned char c = (unsigned char)word[i];
+            if (!isalpha(c) && c != '-' && c != '\'' && c != ' '){
+                return 0;  // 如果包含非字母字符，返回0
+            }
+        }   
         return 1;  // 所有字符都是字母，返回1
     }
 
