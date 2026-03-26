@@ -668,12 +668,9 @@ int main() {
                 correct++;
                 // 答对了，标记为已复习
                 word->is_mistake = 0;
-                // 同时可以正常更新记忆等级
-                update_word_level(word, 1);
-            } else {
-                // 答错了，依然保留在错题本，但也要更新记忆等级（下降）
-                update_word_level(word, 0);
             }
+             // 正常更新记忆等级
+                update_word_level(word, is_correct);
             reviewed++;
 
             // 按回车键继续复习
