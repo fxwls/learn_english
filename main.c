@@ -396,6 +396,18 @@ int main() {
 
         time_t now = time(NULL);// 获取当前时间
         word->last_review = now;// 更新单词的上次复习时间为当前时间
+
+        // 先更新等级与计数
+        if (is_correct) {
+            word->correct_count++;// 如果用户回答正确，增加正确记忆次数
+            word->level = (word->level < 7) ? word->level + 1 : 7;// 如果记忆等级小于7，增加等级
+        } else {
+            word->wrong_count++;// 如果用户回答错误，增加错误记忆次数
+            word->is_mistake = 1;   // 标记单词为错题
+            if (word->level > 0) {
+                word->level--;// 如果记忆等级大于0，减少等级
+        }
+        }
         
         // 计算当前正确率（避免除以0）
         int total = word->correct_count + word->wrong_count;
@@ -415,21 +427,13 @@ int main() {
             default: base_interval = LEVEL_0_INTERVAL;
         }
 
+        //计算下次复习时间
         if (is_correct) {
-            word->correct_count++;
-            if (word->level < MAX_LEVEL) {
-                word->level++;
-            }
             //根据正确率动态延长间隔（正确率>80%间隔×1.2，否则不变）
             if (correct_rate > 0.8) {
                 base_interval = (int)(base_interval * 1.2);
             }
         } else {
-            word->wrong_count++;// 如果用户回答错误，增加单词的错误记忆次数
-            word->is_mistake = 1;
-            if (word->level > 0) {
-                word->level--;
-            }
             //根据正确率缩短间隔（正确率<60% 间隔×0.5，否则不变）
             if (correct_rate < 0.6 && total > 0) {
                 base_interval = (int)(base_interval * 0.5);
