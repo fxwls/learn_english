@@ -445,7 +445,7 @@ int main() {
         word->next_review = now + base_interval;// 根据base_interval设置下次复习时间
     }
   
-    void review_words() {// 复习待复习单词主函数
+    void review_words() {// 复习待复习单词主函数(使用临时指针数组排序)
         clear_screen();
         printf("\n=======单词复习=======\n");
 
