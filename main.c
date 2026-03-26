@@ -72,6 +72,7 @@ void show_review_rank();//复习排行榜
 int compare_word_ptr_by_review(const void *a, const void *b);//比较函数
 
 void review_mistakes();// 专项复习错题
+ void trim(char *str);// 去除字符串两端的空格
 
 // 主函数
 int main() {
@@ -363,34 +364,44 @@ int main() {
     int quiz_cn_to_en(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的英文单词
         printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
-
-        while (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
-            printf("输入不能为空，请重新输入！\n");
-        }
-
-        if (strcasecmp_custom(input,word->english) == 0) {
-            printf("回答正确！\n");
-            return 1; // 如果用户输入的英文单词与单词的英文字段匹配，返回1表示正确
-        } else {
-            printf("回答错误！正确答案是：%s\n", word->english); // 如果用户输入的英文单词与单词的英文字段不匹配，提示用户正确答案并返回0表示错误
-            return 0;
+        while(1) {//
+            if (!safe_input(input,MAX_STR)) {// 
+                printf("输入不能为空，请重新输入(按q退出)！\n");
+                continue;
+            }
+            if (strcasecmp_custom(input,"q") == 0) {
+                return -1;
+            }
+            if (strcasecmp_custom(input,word->english) == 0) {
+                printf("回答正确！\n");
+                return 1; // 如果用户输入的英文单词与单词的英文字段匹配，返回1表示正确
+            } else {
+                printf("回答错误！正确答案是：%s\n", word->english); // 如果用户输入的英文单词与单词的英文字段不匹配，提示用户正确答案并返回0表示错误
+                return 0;
+            }
         }
     }
 
     int quiz_en_to_cn(Word *word) {// 单词测试（英译中），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的中文释义
         printf("\n【英译中】%s\n", word->english); // 提示用户输入单词的中文释义
-
-        while (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
-            printf("输入不能为空，请重新输入！\n");
-        }
-
-        if (strcmp(input,word->chinese) == 0) { // 使用 strcmp 直接比较，避免 tolower 破坏 UTF-8 中文编码
-            printf("回答正确！\n");
-            return 1; // 如果用户输入的中文释义与单词的中文字段匹配，返回1表示正确
-        } else {
-            printf("回答错误！正确答案是：%s\n", word->chinese); // 如果用户输入的中文释义与单词的中文字段不匹配，提示用户正确答案并返回0表示错误
-            return 0;
+       
+        while(1) {
+            if (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
+                printf("输入不能为空，请重新输入！\n");
+                continue;
+            }
+            trim(input);// 去除字符串两端的空格
+            if (strcasecmp_custom(input, "q") == 0) {
+                return -1;
+            }
+            if (strcmp(input,word->chinese) == 0) { // 使用 strcmp 直接比较，避免 tolower 破坏 UTF-8 中文编码
+                printf("回答正确！\n");
+                return 1; // 如果用户输入的中文释义与单词的中文字段匹配，返回1表示正确
+            } else {
+                printf("回答错误！正确答案是：%s\n", word->chinese); // 如果用户输入的中文释义与单词的中文字段不匹配，提示用户正确答案并返回0表示错误
+                return 0;
+            }
         }
     }
   
@@ -490,7 +501,10 @@ int main() {
 
             // 进行单词测试，获取用户的测试结果
             int is_correct = quiz_word(word);
-            if (is_correct) correct++;
+            if (is_correct == -1) {
+                break;// 如果用户输入q，退出复习
+            }
+            if (is_correct == 1) correct++;
             reviewed++;
         
             // 更新单词状态
@@ -501,6 +515,10 @@ int main() {
             char quit[10];
             safe_input(quit, sizeof(quit));
             if (strcasecmp_custom(quit, "q") == 0) {
+                printf("确定退出复习吗？（y/n）");
+                char confirm[10];
+                safe_input(confirm, sizeof(confirm));
+                if (tolower(confirm[0]) == 'y')
                 break; // 如果用户输入q，退出复习循环
             }
 
@@ -668,7 +686,10 @@ int main() {
 
             // 进行测试
             int is_correct = quiz_word(word);
-            if (is_correct) {
+            if (is_correct == -1) {
+                break;// 如果用户选择退出，跳出循环
+            }
+            if (is_correct == 1) {
                 correct++;
             }
              // 正常更新记忆等级
@@ -689,4 +710,13 @@ int main() {
         printf("\n错题复习完成！本次复习：%d个单词，正确率：%.2f%%\n", reviewed,(reviewed > 0) ? (correct * 100.0 / reviewed) : 0.0);
         printf("按回车键返回主菜单...\n");
         getchar();
+    }
+
+    void trim(char *str) {// 去除字符串两端的空格
+        char *start = str;
+        char *end = str + strlen(str) - 1;
+        while (isspace((unsigned char)*start)) start++;
+        while (end > start && isspace((unsigned char)*end)) end--;
+        memmove(str, start, end - start + 1);
+        str[end - start + 1] = '\0';
     }
