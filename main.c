@@ -404,12 +404,13 @@ int main() {
         if (is_correct) {
             word->correct_count++;// 如果用户回答正确，增加正确记忆次数
             word->level = (word->level < 7) ? word->level + 1 : 7;// 如果记忆等级小于7，增加等级
+            word->is_mistake = 0;   // 标记单词为正确
         } else {
             word->wrong_count++;// 如果用户回答错误，增加错误记忆次数
             word->is_mistake = 1;   // 标记单词为错题
             if (word->level > 0) {
                 word->level--;// 如果记忆等级大于0，减少等级
-        }
+            }
         }
         
         // 计算当前正确率（避免除以0）
@@ -669,8 +670,6 @@ int main() {
             int is_correct = quiz_word(word);
             if (is_correct) {
                 correct++;
-                // 答对了，标记为已复习
-                word->is_mistake = 0;
             }
              // 正常更新记忆等级
                 update_word_level(word, is_correct);
