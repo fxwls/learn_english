@@ -58,8 +58,6 @@ int is_duplicate(const char *english); // 检查是否有重复的英文单词�
 void add_word(); // 添加新单词到词库中的函数
 
 int get_need_review_count(); // 获取需要复习的单词数量的函数
-void sort_words_by_review(); // 按复习紧迫度排序单词的比较
-int compare_word_by_review(const void *a, const void *b); // 按复习紧迫度排序单词的比较函数（用于qsort函数）
 int is_valid_english(const char *word); // 检查英文单词是否只包含英文字母的函数
 void format_time(time_t t, char *buf, int buf_size); // 时间格式化函数，将时间戳转换为可读的日期时间字符串
 void show_word_detail(Word *word); // 显示单词详细信息的函数
@@ -326,20 +324,6 @@ int main() {
         return count;
     }
   
-    void sort_words_by_review() {// 按复习紧迫度排序单词的比较函数（快速排序使用）
-        if (g_vocab.count <= 1) return; // 如果单词数量小于或等于1，不需要排序
-
-        qsort(g_vocab.words, g_vocab.count, sizeof(Word), compare_word_by_review); // 使用标准库函数qsort对单词信息数组进行排序，按照复习紧迫度排序
-    }
-
-    int compare_word_by_review(const void *a, const void *b) {// 按复习紧迫度排序单词的比较函数（用于qsort函数）
-        const Word *word1 = (const Word *)a;
-        const Word *word2 = (const Word *)b;
-        if (word1->next_review < word2->next_review) return -1;// 如果第一个单词的下次复习时间小于第二个单词的下次复习时间，返回-1表示第一个单词需要更紧迫地复习
-        if (word1->next_review > word2->next_review) return 1;// 如果第一个单词的下次复习时间大于第二个单词的下次复习时间，返回1表示第二个单词需要更紧迫地复习
-        return 0;
-    }
-  
     void format_time(time_t t, char *buf, int buf_size) {// 时间格式化函数，将时间戳转换为可读的日期时间字符串
         if (t == 0) {// 如果时间戳为0，表示单词还没有被复习过，返回"未复习"
             strncpy(buf, "未复习", buf_size - 1);
@@ -474,16 +458,25 @@ int main() {
         printf("按回车键开始复习...");
         getchar();
 
-        sort_words_by_review(); // 按复习紧迫度排序单词，确保最需要复习的单词优先出现
-
-        int reviewed = 0, correct = 0;
+        // 初始化复习进度
         time_t now = time(NULL);
+        Word *to_review[MAX_WORD];
+        int to_review_count = 0;
 
         // 遍历所有单词，复习需要复习的单词
         for (int i = 0; i <g_vocab.count; i++) {
-            Word *word = &g_vocab.words[i];
-            if (word->next_review > now) continue; 
+            if(g_vocab.words[i].next_review <= now) {
+                to_review[to_review_count++] = &g_vocab.words[i];
+            }
+        }
 
+        // 对指针数组按复习紧迫度排序（使用compare_word_ptr函数作为比较函数）
+        qsort(to_review, to_review_count, sizeof(Word *), compare_word_ptr_by_review);
+
+        // 复习单词
+        int reviewed = 0, correct = 0;
+        for (int i = 0; i < to_review_count; i++) {
+            Word *word = to_review[i];
             clear_screen();
             printf("【复习进度】%d/%d\n", reviewed + 1, need_review);
 
