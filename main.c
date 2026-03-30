@@ -78,8 +78,12 @@ void review_mistakes();// 专项复习错题
 int main() {
 
 //强制控制台输入输出使用UTF-8编码，确保中文显示正常
-    SetConsoleOutputCP(CP_UTF8); // 设置控制台输出编码为UTF-8
-    SetConsoleCP(CP_UTF8); // 设置控制台输入编码为UTF-8
+    #ifdef _WIN32
+        SetConsoleOutputCP(CP_UTF8); // 设置控制台输出编码为UTF-8
+        SetConsoleCP(CP_UTF8); // 设置控制台输入编码为UTF-8
+    #else
+        setlocale(LC_ALL, ""); // Linux 使用系统 locale 支持 UTF-8
+    #endif
 
     memset(&g_vocab, 0, sizeof(Vocab)); // 初始化全局变量g_vocab的内存空间，确保所有字段都被初始化为0，避免内存垃圾值导致崩溃
     g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
