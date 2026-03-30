@@ -368,6 +368,7 @@ int main() {
     int quiz_cn_to_en(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的英文单词
         printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
+        trim(input);
         while(1) {//
             if (!safe_input(input,MAX_STR)) {// 
                 printf("输入不能为空，请重新输入(按q退出)！\n");
