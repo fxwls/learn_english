@@ -36,6 +36,7 @@ typedef struct {// 定义一个结构体类型Word，用于存储单词信息
 typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库的信息
     Word words[MAX_WORD];// 存储单词信息的数组，最多可以存储2000个单词
     int count;// 当前存储的单词数量，记录已经存储了多少个单词
+    int last_add_date;// 最近添加单词的日期，记录最近一次添加单词的日期，用于统计每天添加单词的数量
 } Vocab;
 
 typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的模式
@@ -187,16 +188,20 @@ int main() {
             return;
         }
 
-        size_t write_count = fwrite(&g_vocab.count, sizeof(int), 1, fp);// 首先写入单词数量，如果写入失败，说明文件可能无法写入
-        if (write_count != 1) {
+        if (fwrite(&g_vocab.count, sizeof(int), 1, fp) != 1) {// 首先写入单词数量，如果写入失败，说明文件可能无法写入 
             printf("错误:保存单词数量失败！\n");
             fclose(fp); // 关闭文件
             return; 
         }
 
+        if (fwrite(&g_vocab.last_add_date, sizeof(int),1, fp) != 1) {
+            printf("错误:保存最后添加日期失败！\n");
+            fclose(fp); // 关闭文件
+            return;
+        }
+
         if (g_vocab.count > 0) {// 如果有单词需要写入，才写入单词信息数组
-            write_count = fwrite(g_vocab.words, sizeof(Word), g_vocab.count, fp);// 然后写入单词信息数组，如果写入的数量不匹配，说明文件可能无法写入
-            if (write_count != g_vocab.count) {
+            if (fwrite(g_vocab.words, sizeof(Word), g_vocab.count, fp) != g_vocab.count) {
                 printf("错误:保存单词数据不完整！\n");
                 fclose(fp); // 关闭文件
                 return;
