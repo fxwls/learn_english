@@ -368,12 +368,12 @@ int main() {
     int quiz_cn_to_en(Word *word) {// 单词测试（中译英），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的英文单词
         printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
-        trim(input);
         while(1) {//
             if (!safe_input(input,MAX_STR)) {// 
                 printf("输入不能为空，请重新输入(按q退出)！\n");
                 continue;
             }
+            trim(input);// 去除字符串两端的空格
             if (strcasecmp_custom(input,"q") == 0) {
                 return -1;
             }
@@ -390,7 +390,6 @@ int main() {
     int quiz_en_to_cn(Word *word) {// 单词测试（英译中），返回1=正确，0=错误的函数
         char input[MAX_STR];// 定义一个字符串变量，用于存储用户输入的中文释义
         printf("\n【英译中】%s\n", word->english); // 提示用户输入单词的中文释义
-       
         while(1) {
             if (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
                 printf("输入不能为空，请重新输入！\n");
