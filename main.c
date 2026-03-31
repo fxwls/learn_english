@@ -75,6 +75,9 @@ int compare_word_ptr_by_review(const void *a, const void *b);//比较函数
 void review_mistakes();// 专项复习错题
 void trim(char *str);// 去除字符串两端的空格
 
+int time_to_date(time_t t);// 时间戳转换为日期（年月日）的函数，返回一个整数表示日期，格式为YYYYMMDD
+int get_today();// 获取今天的日期，返回一个整数表示日期，格式为YYYYMMDD
+
 // 主函数
 int main() {
 
@@ -325,6 +328,8 @@ int main() {
         g_vocab.words[g_vocab.count] = new_word; // 将新单词添加到单词信息数组中
         g_vocab.count++; // 增加单词数量
 
+        g_vocab.last_add_date = get_today(); // 更新最近添加单词的日期为今天
+        
         printf("单词 %s 添加成功！\n", en); // 提示用户单词添加成功
         save_vocab(); // 保存当前的单词信息到文件中
         printf("按回车键继续...");
@@ -479,6 +484,15 @@ int main() {
   
     void review_words() {// 复习待复习单词主函数(使用临时指针数组排序)
         clear_screen();
+        // ======每日必须先添加单词才能复习 ======
+        int today = get_today();
+        if (g_vocab.last_add_date != today) {
+            printf("今日还未添加新单词！\n");
+            printf("请先录入至少1个单词，才能开始复习！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
         printf("\n=======单词复习=======\n");
         time_t now = time(NULL);// 获取当前时间
         Word *to_review[MAX_WORD];// 定义一个指针数组，用于存储需要复习的单词的指针
@@ -725,7 +739,7 @@ int main() {
         getchar();
     }
 
-    void trim(char *str) {// 去除字符串两端的空格
+    void trim(char *str) {// 去除字符串两端的空格的函数
         if (str == NULL || strlen(str) == 0) return;
 
         char *start = str;
@@ -741,4 +755,17 @@ int main() {
         while (end > start && isspace((unsigned char)*end)) end--;
         memmove(str, start, end - start + 1);
         str[end - start + 1] = '\0';
+    }
+
+    int time_to_date(time_t t) {// 时间戳转换为日期（年月日）的函数，返回一个整数表示日期，格式为YYYYMMDD
+        if (t == 0) return 0; // 如果时间戳为0，返回0表示未复习过
+        struct tm *tm_info = localtime(&t);// 将时间戳转换为本地时间的结构体tm_info
+        int year = tm_info->tm_year + 1900; // 获取年份，tm_year是从1900年开始的
+        int month = tm_info->tm_mon + 1; // 获取月份，tm_mon是从0开始的
+        int day = tm_info->tm_mday; // 获取日期
+        return year * 10000 + month * 100 + day; // 将年月日组合成一个整数，格式为YYYYMMDD
+    }
+
+    int get_today() {// 获取今天的日期，返回一个整数表示日期，格式为YYYYMMDD
+        return time_to_date(time(NULL)); // 获取当前时间的时间戳，并转换为日期格式
     }
