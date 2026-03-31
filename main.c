@@ -73,7 +73,7 @@ void show_review_rank();//复习排行榜
 int compare_word_ptr_by_review(const void *a, const void *b);//比较函数
 
 void review_mistakes();// 专项复习错题
- void trim(char *str);// 去除字符串两端的空格
+void trim(char *str);// 去除字符串两端的空格
 
 // 主函数
 int main() {
@@ -237,7 +237,7 @@ int main() {
             g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
             return;
         }
-        
+
         if (g_vocab.count > 0) {// 如果有单词需要读取，才从文件中读取单词信息数组
             read_size = fread(g_vocab.words, sizeof(Word), g_vocab.count, fp);// 从文件中读取单词信息数组，如果读取的数量不匹配，说明文件可能损坏
             if (read_size != g_vocab.count){// 如果读取的数量不匹配，说明文件可能损坏
@@ -730,9 +730,18 @@ int main() {
     }
 
     void trim(char *str) {// 去除字符串两端的空格
+        if (str == NULL || strlen(str) == 0) return;
+
         char *start = str;
         char *end = str + strlen(str) - 1;
+
         while (isspace((unsigned char)*start)) start++;
+
+        if (start > end) {
+            str[0] = '\0'; // 字符串全是空格，结果是空字符串
+            return;
+        }
+        
         while (end > start && isspace((unsigned char)*end)) end--;
         memmove(str, start, end - start + 1);
         str[end - start + 1] = '\0';
