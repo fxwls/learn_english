@@ -230,6 +230,14 @@ int main() {
             return;
         }
 
+        read_size = fread(&g_vocab.last_add_date, sizeof(int), 1, fp);// 从文件中读取最近添加单词的日期，如果读取失败，说明文件可能损坏
+        if (read_size != 1) {
+            printf("词库文件损坏，初始化空词库! \n");
+            fclose(fp); // 关闭文件
+            g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
+            return;
+        }
+        
         if (g_vocab.count > 0) {// 如果有单词需要读取，才从文件中读取单词信息数组
             read_size = fread(g_vocab.words, sizeof(Word), g_vocab.count, fp);// 从文件中读取单词信息数组，如果读取的数量不匹配，说明文件可能损坏
             if (read_size != g_vocab.count){// 如果读取的数量不匹配，说明文件可能损坏
