@@ -96,8 +96,18 @@ int main() {
     int choice;
     do {
         clear_screen(); // 清屏函数，清除控制台上的内容
+
+        // 统计今天新增的单词数量，统计最近添加单词的日期与今天的日期是否相同，如果相同则统计为今天新增的单词
+        int today = get_today(); 
+        int today_add = 0;
+        for (int i = 0; i < g_vocab.count; i++) {
+            if (time_to_date(g_vocab.words[i].last_review) == today) {
+                today_add++;
+            }
+        }
         printf("\n============艾宾浩斯单词记忆系统============\n");
         printf("当前词库单词数: %d | 待复习单词数: %d\n", g_vocab.count, get_need_review_count()); // 显示当前词库中的单词数量和需要复习的单词数量
+        printf("今日新增单词数: %d\n", today_add);// 显示今天新增的单词数量
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
         printf("3.查看待复习排行榜\n");
@@ -329,7 +339,7 @@ int main() {
         g_vocab.count++; // 增加单词数量
 
         g_vocab.last_add_date = get_today(); // 更新最近添加单词的日期为今天
-        
+
         printf("单词 %s 添加成功！\n", en); // 提示用户单词添加成功
         save_vocab(); // 保存当前的单词信息到文件中
         printf("按回车键继续...");
