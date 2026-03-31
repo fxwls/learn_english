@@ -480,24 +480,9 @@ int main() {
     void review_words() {// 复习待复习单词主函数(使用临时指针数组排序)
         clear_screen();
         printf("\n=======单词复习=======\n");
-
-        int need_review = get_need_review_count();
-        if (need_review == 0) {
-            printf("当前暂无需要复习的单词！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return;
-        }
-
-        printf("待复习单词数量：%d\n", need_review);
-        select_test_mode(); // 选择测试模式，允许用户选择中译英测试还是英译中测试
-        printf("按回车键开始复习...");
-        getchar();
-
-        // 初始化复习进度
-        time_t now = time(NULL);
-        Word *to_review[MAX_WORD];
-        int to_review_count = 0;
+        time_t now = time(NULL);// 获取当前时间
+        Word *to_review[MAX_WORD];// 定义一个指针数组，用于存储需要复习的单词的指针
+        int to_review_count = 0;// 定义一个整数变量，用于记录需要复习的单词数量
 
         // 遍历所有单词，复习需要复习的单词
         for (int i = 0; i <g_vocab.count; i++) {
@@ -505,6 +490,17 @@ int main() {
                 to_review[to_review_count++] = &g_vocab.words[i];
             }
         }
+        if (to_review_count == 0) {
+            printf("当前暂无需要复习的单词！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        printf("待复习单词数量：%d\n", to_review_count);
+        select_test_mode(); // 选择测试模式，允许用户选择中译英测试还是英译中测试
+        printf("按回车键开始复习...");
+        getchar();
 
         // 对指针数组按复习紧迫度排序（使用compare_word_ptr函数作为比较函数）
         qsort(to_review, to_review_count, sizeof(Word *), compare_word_ptr_by_review);
@@ -514,7 +510,7 @@ int main() {
         for (int i = 0; i < to_review_count; i++) {
             Word *word = to_review[i];
             clear_screen();
-            printf("【复习进度】%d/%d\n", reviewed + 1, need_review);
+            printf("【复习进度】%d/%d\n", reviewed + 1, to_review_count);
 
             // 进行单词测试，获取用户的测试结果
             int is_correct = quiz_word(word);
@@ -741,7 +737,7 @@ int main() {
             str[0] = '\0'; // 字符串全是空格，结果是空字符串
             return;
         }
-        
+
         while (end > start && isspace((unsigned char)*end)) end--;
         memmove(str, start, end - start + 1);
         str[end - start + 1] = '\0';
