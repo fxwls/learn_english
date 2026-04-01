@@ -19,6 +19,9 @@
 #define LEVEL_6_INTERVAL 604800// 记忆等级6的复习间隔为7天
 #define LEVEL_7_INTERVAL 2592000// 记忆等级7的复习间隔为30天
 #define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
+//加密
+#define ENCRYPT_KEY 0x7B// 加密密钥
+#define BACKUP_FILE "vocab_backup.dat"// 备份文件的名称，用于保存加密后的单词信息
 
 //结构体定义
 typedef struct {// 定义一个结构体类型Word，用于存储单词信息
@@ -37,6 +40,7 @@ typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库�
     Word words[MAX_WORD];// 存储单词信息的数组，最多可以存储2000个单词
     int count;// 当前存储的单词数量，记录已经存储了多少个单词
     int last_add_date;// 最近添加单词的日期，记录最近一次添加单词的日期，用于统计每天添加单词的数量
+    int checksum;// 校验和，用于检测词库文件是否损坏
 } Vocab;
 
 typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的模式
@@ -46,7 +50,7 @@ typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的�
 TestMode current_test_mode = MODE_CN_TO_EN; // 当前的测试模式，默认为中译英测试模式
 
 // 全局变量
-    Vocab g_vocab = {.count = 0};// 全局变量，存储当前的单词信息，初始化单词数量为0, 显性初始化结构体，确保所有字段都被正确初始化
+Vocab g_vocab = {.count = 0};// 全局变量，存储当前的单词信息，初始化单词数量为0, 显性初始化结构体，确保所有字段都被正确初始化
 
 // 函数声明
 void clear_screen(); // 清屏函数，清除控制台上的内容
@@ -78,6 +82,12 @@ void trim(char *str);// 去除字符串两端的空格
 int time_to_date(time_t t);// 时间戳转换为日期（年月日）的函数，返回一个整数表示日期，格式为YYYYMMDD
 int get_today();// 获取今天的日期，返回一个整数表示日期，格式为YYYYMMDD
 
+void encrypt_data(void *data, int len);// 加密数据的函数，使用简单的异或加密方法对数据进行加密
+void decrypt_data(void *data, int len);// 解密数据的函数，使用与加密相同的方法对数据进行解密
+int calculate_checksum(Vocab *vocab);// 计算校验和的函数，根据词库中的单词信息计算一个校验和，用于检测文件是否损坏
+void backup_vocab(); // 备份单词信息到加密文件的函数，将当前的单词信息加密后保存到一个备份文件中，以防止数据丢失或被未授权访问
+int is_file_same() ;// 检查当前词库文件和备份文件是否相同的函数，以此来判断是否损坏或被篡改
+
 // 主函数
 int main() {
 
@@ -92,6 +102,8 @@ int main() {
     memset(&g_vocab, 0, sizeof(Vocab)); // 初始化全局变量g_vocab的内存空间，确保所有字段都被初始化为0，避免内存垃圾值导致崩溃
     g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
     load_vocab(); // 从文件中加载单词信息到全局变量g_vocab中
+    printf("按回车键继续...");
+    getchar(); // 等待用户按下回车键继续操作
 
     int choice;
     do {
@@ -137,7 +149,11 @@ int main() {
             case 5:// 如果用户选择5，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
+                backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
                 printf("数据保存成功！再见！\n");
+                printf("提示：备份文件已保存为 %s，建议定期备份以防止数据丢失！\n", BACKUP_FILE);
+                printf("按回车键继续...");
+                getchar(); // 等待用户按下回车键继续操作
                 break;
             default:// 如果用户输入了无效的选择，提示用户重新输入
                 printf("无效的选择，请重新输入！\n");
@@ -195,31 +211,17 @@ int main() {
             return; 
         }
 
+        g_vocab.checksum = calculate_checksum(&g_vocab); // 计算校验和，确保文件完整性
         FILE *fp = fopen(FILE_NAME, "wb");// 以二进制写入模式打开文件，如果文件不存在会创建新文件
         if (!fp) {
             printf("错误:无法打开文件保存！\n");
             return;
         }
 
-        if (fwrite(&g_vocab.count, sizeof(int), 1, fp) != 1) {// 首先写入单词数量，如果写入失败，说明文件可能无法写入 
-            printf("错误:保存单词数量失败！\n");
-            fclose(fp); // 关闭文件
-            return; 
-        }
-
-        if (fwrite(&g_vocab.last_add_date, sizeof(int),1, fp) != 1) {
-            printf("错误:保存最后添加日期失败！\n");
-            fclose(fp); // 关闭文件
-            return;
-        }
-
-        if (g_vocab.count > 0) {// 如果有单词需要写入，才写入单词信息数组
-            if (fwrite(g_vocab.words, sizeof(Word), g_vocab.count, fp) != g_vocab.count) {
-                printf("错误:保存单词数据不完整！\n");
-                fclose(fp); // 关闭文件
-                return;
-            }
-        }
+        // 对词库信息进行加密   
+        Vocab tmp = g_vocab; // 创建一个临时变量，保存当前的词库信息
+        encrypt_data(&tmp, sizeof(Vocab)); // 对词库信息进行加密
+        fwrite(&tmp, sizeof(Vocab), 1, fp); // 将加密后的词库信息写入文件
 
         fclose(fp); // 关闭文件
         printf("数据保存成功！\n");
@@ -232,37 +234,59 @@ int main() {
         FILE *fp = fopen(FILE_NAME, "rb");// 以二进制读取模式打开文件，如果文件不存在会返回NULL
         if (!fp) {
             printf("首次运行，未找到词库文件，已初始化空词库！\n");
+            printf("提示：请先通过[录入新单词]功能添加至少一个单词，才能开始复习！\n");
             return;
         }
 
-        size_t read_size = fread(&g_vocab.count, sizeof(int), 1, fp);// 从文件中读取单词数量，如果读取失败，说明文件可能损坏
-        if (read_size != 1 || g_vocab.count < 0 || g_vocab.count > MAX_WORD) {// 检查读取的单词数量是否在合理范围内，防止异常数据导致后续读取错误
-            printf("词库文件损坏，初始化空词库! \n");
-            fclose(fp); // 关闭文件
-            g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
+        // 读取文件中的词库信息
+        Vocab tmp;// 创建一个临时变量，保存从文件中读取的词库信息
+        if (fread(&tmp, sizeof(Vocab), 1, fp) != 1) {
+            printf("\n======================================\n");
+            printf("错误：词库文件损坏（读取失败）！\n");
+            printf("可能原因：文件被手动修改/磁盘损坏\n");
+            printf("解决方案：\n");
+            printf("1. 删除 vocab.dat 重新创建词库\n");
+            printf("2. 若有备份，后续可通过恢复功能找回\n");
+            printf("======================================\n");
+            fclose(fp);
+            return;
+        }
+        fclose(fp);
+
+        // 对词库信息进行解密
+        decrypt_data(&tmp, sizeof(Vocab)); // 对词库信息进行解密
+
+        // 验证校验和，确保文件完整性
+        if (tmp.checksum != calculate_checksum(&tmp)) {
+            printf("\n======================================\n");
+            printf("错误：词库文件损坏（校验失败）！\n");
+            printf("可能原因：文件被手动修改/磁盘损坏\n");
+            printf("解决方案：\n");
+            printf("1. 删除 vocab.dat 重新创建词库\n");
+            printf("2. 若有备份，后续可通过恢复功能找回\n");
+            printf("======================================\n");
             return;
         }
 
-        read_size = fread(&g_vocab.last_add_date, sizeof(int), 1, fp);// 从文件中读取最近添加单词的日期，如果读取失败，说明文件可能损坏
-        if (read_size != 1) {
-            printf("词库文件损坏，初始化空词库! \n");
-            fclose(fp); // 关闭文件
-            g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
-            return;
-        }
-
-        if (g_vocab.count > 0) {// 如果有单词需要读取，才从文件中读取单词信息数组
-            read_size = fread(g_vocab.words, sizeof(Word), g_vocab.count, fp);// 从文件中读取单词信息数组，如果读取的数量不匹配，说明文件可能损坏
-            if (read_size != g_vocab.count){// 如果读取的数量不匹配，说明文件可能损坏
-                printf("词库文件数据不完整，初始化空词库！\n");
-                fclose(fp); // 关闭文件
-                g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
+        // 比较主文件与备份文件,防止数据被篡改
+        FILE *fb = fopen(BACKUP_FILE, "rb");
+        if (fb != NULL) {// 如果备份文件存在，则比较主文件和备份文件是否相同
+            fclose(fb);
+            if (!is_file_same()) {
+                printf("\n======================================\n");
+                printf("警告：检测到词库文件异常！可能已被篡改或损坏！\n");
+                printf("建议：删除 %s 文件后重新运行程序，或从备份文件恢复数据！\n", FILE_NAME);
+                printf("======================================\n");
+                fclose(fp);
+                memset(&g_vocab, 0, sizeof(Vocab));// 如果文件异常，清空当前的词库信息，防止使用损坏的数据进行复习
+                g_vocab.count = 0;
                 return;
             }
         }
 
-        fclose(fp); // 关闭文件
+        g_vocab = tmp; // 将解密后的词库信息赋值给全局变量g_vocab
         printf("已加载 %d个单词!\n", g_vocab.count); // 打印加载的单词数量
+        printf("待复习单词数: %d\n", get_need_review_count()); // 打印需要复习的单词数量
     }
 
     int is_duplicate(const char *english) {// 检查是否有重复的英文单词的函数
@@ -682,7 +706,7 @@ int main() {
                     break;
                 } else {
                     printf("无效输入，按回车继续...");
-                    getchar();// 等待回车
+                    getchar();// 等待回车  
                 }
             } while (choice != 'q');
     }
@@ -786,4 +810,73 @@ int main() {
 
     int get_today() {// 获取今天的日期，返回一个整数表示日期，格式为YYYYMMDD
         return time_to_date(time(NULL)); // 获取当前时间的时间戳，并转换为日期格式
+    }
+
+    void encrypt_data(void *data, int len) {// 加密数据的函数，使用简单的异或加密方法对数据进行加密
+        unsigned char *p = (unsigned char *)data;
+        for (int i = 0; i < len; i++) {// 对数据中的每个字节进行异或操作
+            p[i] ^= ENCRYPT_KEY;
+        }
+    }
+
+    void decrypt_data(void *data, int len) {
+        // 加密和解密是对称的，直接调用加密函数即可
+        encrypt_data(data, len);
+    }
+
+    int calculate_checksum(Vocab *vocab) {// 计算词库数据的校验和的函数，用于验证数据的完整性，返回一个整数表示校验和
+        int sum = vocab->count + vocab->last_add_date; // 将单词数量和最后添加日期的整数值进行加法运算
+        for (int i = 0; i < vocab->count; i++) {
+            sum += vocab->words[i].id;
+            sum += vocab->words[i].level;
+            sum += (int)vocab->words[i].last_review;
+            sum += (int)vocab->words[i].next_review;
+            sum += vocab->words[i].correct_count;
+            sum += vocab->words[i].wrong_count;
+        }
+        return sum;
+    }
+
+    void backup_vocab() {
+        // 备份文件也加密保存，防止数据泄露或被未授权访问
+        Vocab tmp = g_vocab; // 创建一个临时变量，保存当前的词库信息
+        encrypt_data(&tmp, sizeof(Vocab)); // 对词库信息进行加密
+
+        FILE *fp = fopen(BACKUP_FILE, "wb");// 以二进制写入模式打开备份文件，如果文件不存在会创建新文件
+        if (!fp) {
+            printf("备份文件创建失败！\n");
+            printf("建议：检查程序目录权限，或手动创建空的 %s 文件后重试！\n", BACKUP_FILE);
+            return;
+        }
+        fwrite(&tmp, sizeof(Vocab), 1, fp); // 将整个词库数据结构写入备份文件中
+        fclose(fp); // 关闭文件
+
+        printf("数据备份成功！生成备份文件：%s\n", BACKUP_FILE);// 提示用户数据备份成功，并显示备份文件的名称
+    }
+
+    int is_file_same() {// 比较当前词库文件和备份文件是否相同的函数，返回1表示相同，返回0表示不同
+        FILE *f1 = fopen(FILE_NAME, "rb");
+        FILE *f2 = fopen(BACKUP_FILE, "rb");
+
+        if (!f1 || !f2) {
+            if (f1) fclose(f1);
+            if (f2) fclose(f2);
+            return 0; // 如果任一文件无法打开，认为文件不同
+        }
+        // 逐字节比较两个文件的内容
+        unsigned char c1, c2;
+        while(1) {
+            c1 = fgetc(f1);
+            c2 = fgetc(f2);
+            if (feof(f1) && feof(f2)) {
+                fclose(f1);
+                fclose(f2);
+                return 1; // 如果两个文件都到达末尾，认为文件相同
+            }
+            if (c1 != c2) {
+                fclose(f1);
+                fclose(f2);
+                return 0; // 如果读取的字节不同，认为文件不同
+            }
+        }
     }
