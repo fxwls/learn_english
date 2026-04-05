@@ -167,6 +167,7 @@ int main() {
                     sub_choice = 0;
                     while (getchar() != '\n');
                 }
+                getchar();// 清除scanf留下的换行符
                 switch (sub_choice) {
                     case 1:
                         create_new_vocab();
@@ -944,7 +945,7 @@ int main() {
         char file_name[256];
         printf("请输入词库文件名(不包括扩展名):\n");
         safe_input(file_name, sizeof(file_name) - 4); // 获取用户输入的词库文件名，并存储在file_name变量中
-        getchar(); // 清除输入缓冲区中的换行符
+
         if (strlen(file_name) == 0) {
             printf("文件名不能为空！\n");
             printf("按回车键返回主菜单...");
@@ -1019,7 +1020,7 @@ int main() {
 
         char file_name[256];
         printf("请输入要切换的词库文件名(不包括扩展名):\n");
-        getchar(); // 清除输入缓冲区中的换行符
+
         if (!safe_input(file_name, sizeof(file_name) - 4) || strlen(file_name) == 0) {
             printf("输入无效！\n");
             printf("按回车键返回主菜单...");
@@ -1049,7 +1050,7 @@ int main() {
         getchar();
     }
 
-    void restore_vocab() {
+    void restore_vocab() {// 恢复词库
         clear_screen();
         printf("=======恢复词库======\n");
 
@@ -1112,7 +1113,7 @@ int main() {
         target_vocab[255] = '\0';
         char *p = strstr(target_vocab, "_backup.dat");
         if (p) {
-            *p = '\0'; // 去掉"_backup.dat"后缀，得到原词库文件名
+            strcpy(p, ".dat"); // 将"_backup.dat"替换为".dat"，得到原词库文件名
         } else {
             printf("备份文件名格式不正确！\n");
             printf("按回车键返回主菜单...");
