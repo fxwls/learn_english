@@ -27,6 +27,12 @@ char g_current_backup_vocab_file[300] = "vocab_backup.dat";// 备份词库文件
 
 
 //结构体定义
+typedef struct {// 定义一个结构体类型DailyStat，用于存储每天的复习统计信息
+    int date;         // 复习日期，格式为YYYYMMDD
+    int total_count;  // 复习单词总数，记录当天复习的单词总数量
+    int correct_count;// 正确复习单词数，记录当天正确复习的单词数量
+} DailyStat;
+
 typedef struct {// 定义一个结构体类型Word，用于存储单词信息
     int id;// 单词ID，唯一标识每个单词
     char english[MAX_STR];// 英文单词
@@ -44,7 +50,12 @@ typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库�
     int count;// 当前存储的单词数量，记录已经存储了多少个单词
     int last_add_date;// 最近添加单词的日期，记录最近一次添加单词的日期，用于统计每天添加单词的数量
     int checksum;// 校验和，用于检测词库文件是否损坏
+    DailyStat daily_stats[30];// 存储每天的复习统计信息的数组，最多可以存储30天的数据
+    int daily_stats_count;// 当前存储的复习统计信息数量，记录已经存储了多少天的复习统计信息
 } Vocab;
+
+
+
 
 typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的模式
     MODE_CN_TO_EN, // 中译英测试模式
@@ -97,6 +108,10 @@ void create_new_vocab();// 新建词库
 void switch_vocab(); // 切换词库
 void restore_vocab(); // 从备份恢复词库
 
+DailyStat* get_today_daily_stat();// 获取今天的日志
+void write_daily_log();// 写入日志
+void show_statistics();// 显示复习统计
+
 // 主函数
 int main() {
 
@@ -133,9 +148,10 @@ int main() {
         printf("2.复习单词\n");
         printf("3.查看待复习排行榜\n");
         printf("4.专项复习错题\n");
-        printf("5.新建/切换词库/从备份恢复词库\n");
-        printf("6.退出系统\n");
-        printf("请输入你的选择(1/2/3/4/5/6): ");
+        printf("5.学习统计可视化\n");
+        printf("6.新建/切换词库/从备份恢复词库\n");
+        printf("7.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5/6/7): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -156,7 +172,10 @@ int main() {
             case 4:// 如果用户选择4，打开专项复习错题
                 review_mistakes();
                 break;
-            case 5:// 如果用户选择5，进入新建/切换词库的流程
+            case 5:// 如果用户选择5，进入学习统计可视化的流程
+                show_statistics();
+                break;
+            case 6:// 如果用户选择5，进入新建/切换词库的流程
                 clear_screen();
                 printf("1.新建词库\n");
                 printf("2.切换词库\n");
@@ -184,7 +203,7 @@ int main() {
                         getchar();
                 }
                 break;
-            case 6:// 如果用户选择6，进入退出系统的流程
+            case 7:// 如果用户选择6，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -198,7 +217,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 6); // 循环直到用户选择退出系统
+    } while (choice != 7); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -325,6 +344,11 @@ int main() {
         }
 
         g_vocab = tmp; // 将解密后的词库信息赋值给全局变量g_vocab
+        // 兼容旧版词库
+        if (g_vocab.daily_stats_count < 0 || g_vocab.daily_stats_count > 30) {
+            g_vocab.daily_stats_count = 0;
+        }
+
         printf("已加载词库文件：%s\n", g_current_vocab_file);// 提示用户加载的词库文件名
         printf("已加载 %d个单词!\n", g_vocab.count); // 打印加载的单词数量
         printf("待复习单词数: %d\n", get_need_review_count()); // 打印需要复习的单词数量
@@ -628,6 +652,14 @@ int main() {
 
         // 保存复习后的状态
         save_vocab();
+        // 更新当天统计并写入日志
+        if (reviewed > 0) {
+            DailyStat *today_stat = get_today_daily_stat();
+            today_stat->total_count += reviewed;
+            today_stat->correct_count += correct;
+            save_vocab(); // 保存词库状态，确保统计数据也被保存
+            write_daily_log();// 将当天的统计数据写入日志文件，便于后续分析和查看复习历史
+        }
         printf("\n复习完成！本次复习：%d个单词，正确率%.2f%%\n", reviewed, (reviewed > 0) ? (correct * 100.0 / reviewed) : 0);
         printf("按回车键返回主菜单...");
         getchar();
@@ -656,7 +688,7 @@ int main() {
         }
     }
 
-    void show_review_rank() {
+    void show_review_rank() {// 显示待复习单词排行榜的函数，按照单词的下次复习时间排序，显示需要复习的单词列表，并提供分页浏览功能
         clear_screen();
         printf("\n===========待复习单词排行榜===========\n");
 
@@ -760,7 +792,7 @@ int main() {
         return 0;
     }
 
-    void review_mistakes() {
+    void review_mistakes() {// 专项复习错题的函数，统计错题数量，选择测试模式，按照单词ID顺序复习错题，并更新单词状态和当天统计数据
         clear_screen();
         printf("\n=======专项复习错题本======\n");
 
@@ -817,6 +849,14 @@ int main() {
         
         // 保存更改
         save_vocab();
+        // 更新当天统计并写入日志
+        if (reviewed > 0) {
+            DailyStat *today_stat = get_today_daily_stat();
+            today_stat->total_count += reviewed;
+            today_stat->correct_count += correct;
+            save_vocab(); // 保存词库状态，确保统计数据也被保存
+            write_daily_log();// 将当天的统计数据写入日志文件，便于后续分析和查看复习历史
+        }
         printf("\n错题复习完成！本次复习：%d个单词，正确率：%.2f%%\n", reviewed,(reviewed > 0) ? (correct * 100.0 / reviewed) : 0.0);
         printf("按回车键返回主菜单...\n");
         getchar();
@@ -860,7 +900,7 @@ int main() {
         }
     }
 
-    void decrypt_data(void *data, int len) {
+    void decrypt_data(void *data, int len) {// 解密数据的函数，使用与加密相同的方法对数据进行解密
         // 加密和解密是对称的，直接调用加密函数即可
         encrypt_data(data, len);
     }
@@ -875,10 +915,15 @@ int main() {
             sum += vocab->words[i].correct_count;
             sum += vocab->words[i].wrong_count;
         }
+        for (int i = 0; i < vocab->daily_stats_count && i < 30; i++) {
+            sum += vocab->daily_stats[i].date;
+            sum += vocab->daily_stats[i].correct_count;
+            sum += vocab->daily_stats[i].total_count;
+        }
         return sum;
     }
 
-    void backup_vocab() {
+    void backup_vocab() {// 备份词库的函数，将当前的词库数据加密后保存到备份文件中，以防止数据泄露或被未授权访问
         // 备份文件也加密保存，防止数据泄露或被未授权访问
         static Vocab tmp ;// 定义一个静态变量tmp，用于保存当前的词库信息，静态变量在函数调用结束后仍然存在，避免了频繁的内存分配和释放
         tmp = g_vocab; 
@@ -1174,5 +1219,147 @@ int main() {
         printf("已从 [%s] 恢复 %d 个单词到 [%s]\n",
            selected_backup, g_vocab.count, g_current_vocab_file);
         printf("按回车键返回主菜单...");
+        getchar();
+    }
+
+    DailyStat* get_today_daily_stat() {// 获取今天的日志
+        int today = get_today();
+        // 找到今天的日志
+        for (int i = 0; i < g_vocab.daily_stats_count; i++) {
+            if (g_vocab.daily_stats[i].date == today) {
+                return &g_vocab.daily_stats[i];
+            }
+        }
+        // 如果没有找到，创建新的日志
+        if (g_vocab.daily_stats_count >= 30) {// 如果日志数量超过30，删除最早的日志
+            int min_idx = 0;
+            for (int i = 1; i < g_vocab.daily_stats_count; i++) {
+                if (g_vocab.daily_stats[i].date < g_vocab.daily_stats[min_idx].date) {
+                    min_idx = i;
+                }
+            }
+            for (int i = min_idx; i < g_vocab.daily_stats_count - 1; i++) {
+                g_vocab.daily_stats[i] = g_vocab.daily_stats[i + 1];
+            }
+            g_vocab.daily_stats_count--;
+        }
+        //找到插入位置，保持数组按日期升序
+        int pos = 0;
+        while (pos <g_vocab.daily_stats_count && g_vocab.daily_stats[pos].date < today) {
+            pos++;
+        }
+        //把pos及之后的元素后移一位，腾出位置插入新的日志
+        for (int i = g_vocab.daily_stats_count; i > pos; i--) {
+            g_vocab.daily_stats[i] = g_vocab.daily_stats[i - 1];
+        }
+
+        //插入新的日志
+        g_vocab.daily_stats[pos].date = today;
+        g_vocab.daily_stats[pos].total_count = 0;
+        g_vocab.daily_stats[pos].correct_count = 0;
+        g_vocab.daily_stats_count++;
+        return &g_vocab.daily_stats[pos];
+    }
+
+    void write_daily_log() {// 写入日志
+        FILE *log = fopen("daily_review.log", "w");// 以写入模式打开日志文件，如果文件不存在会创建新文件
+        if (!log) {
+            printf("日志文件创建失败！\n");
+            return;
+        }
+
+        for (int i = 0; i < g_vocab.daily_stats_count; i++) {
+            DailyStat *stat = &g_vocab.daily_stats[i];
+            double rate = (stat->total_count == 0) ? 0.0 : (double)stat->correct_count / stat->total_count * 100;
+            fprintf(log, "%04d-%02d-%02d %d %d  %.2f%%\n", stat->date / 10000, stat->date % 10000 / 100, stat->date % 100, stat->correct_count, stat->total_count, rate); // 将日志写入文件中，格式为年月日：正确率%%%")
+        }
+        fclose(log); // 关闭日志文件
+    }
+
+    void show_statistics() {// 显示复习统计的函数，统计最近7天的复习数量，并以图表形式显示每天的复习单词数和正确率趋势，同时提供文字汇总每天的具体数字
+        clear_screen();
+        printf("\n=======复习统计=======\n");
+        time_t now = time(NULL);
+        int dates[7];
+        int counts[7] = {0};
+        for (int i = 0; i < 7; i++) {
+            time_t day = now - (6 - i) * 86400; // 计算7天前的时间戳
+            dates[i] = time_to_date(day); // 将时间戳转换为日期格式，并存储在dates数组中
+        }
+        for (int i = 0; i < g_vocab.daily_stats_count; i++) {
+            DailyStat *stat = &g_vocab.daily_stats[i];
+            for (int j = 0; j < 7; j++) {
+                if (stat->date == dates[j]) {
+                    counts[j] = stat->total_count; // 如果日志中的日期与dates数组中的日期匹配，将对应的复习数量存储在counts数组中
+                    break;
+                }
+            }
+        }
+
+        int max_count = 1;
+        for (int i = 0; i < 7; i++) {
+            if (counts[i] > max_count) {
+                max_count = counts[i]; // 找到counts数组中的最大值，用于后续的图表显示
+            }
+        }
+        int scale = (max_count + 19) / 20; // 计算图表的缩放比例，每个#代表20个单词
+        if (scale < 1) scale = 1; // 确保缩放比例至少为1，避免除以0的情况
+        printf("【每日复习单词数】（最近7天）\n");
+        printf("（每个 # 代表 %d 个单词）\n", scale);
+        for (int i = 0; i < 7; i++) {
+            time_t day = now - (6 - i) * 86400; // 计算每一天的时间戳
+            struct tm *tm_info = localtime(&day); // 将时间戳转换为本地时间的结构体tm_info
+            char date_str[20];
+            strftime(date_str, sizeof(date_str), "%m-%d", tm_info); // 将时间格式化为字符串，格式为月-日
+
+            int bar_count = counts[i] / scale; // 计算图表中#的数量，根据复习数量和缩放比例进行计算
+            if (bar_count < 1 && counts[i] > 0) bar_count = 1; // 如果复习数量大于0但计算出的#数量为0，至少显示一个#，表示有复习
+            printf("%5s |", date_str); // 输出日期标签
+            for (int j = 0; j < bar_count; j++) {
+                putchar('#'); // 输出#字符，表示复习数量
+            }
+            printf("(%d)\n", counts[i]);
+        }
+        printf("\n【每日复习正确率趋势】（最近%d天）\n", g_vocab.daily_stats_count);
+        if (g_vocab.daily_stats_count == 0) {
+            printf("暂无复习记录。\n");
+        } else {
+            int start = (g_vocab.daily_stats_count > 10) ? g_vocab.daily_stats_count - 10 : 0; // 只显示最近10天的正确率趋势
+            int n = g_vocab.daily_stats_count - start;
+            
+            printf("正确率\n");
+            for (int level = 100; level >= 0; level -= 10) {
+                printf("%3d%% |", level);
+                for (int i = 0; i < n; i++) {
+                    DailyStat *stat = &g_vocab.daily_stats[start + i];
+                    double rate = (stat->total_count == 0) ? 0.0 : (double)stat->correct_count / stat->total_count * 100.0;
+                   if (rate >= (double)level) {
+                        printf("  #  ");   // 5字符宽，与日期对齐
+                    } else {
+                        printf("     ");
+                    }
+                }
+                printf("\n");
+            }
+            printf("     +");
+            for (int i = 0; i < n; i++) printf("-----");  // 每列5字符
+            printf("\n      ");
+            for (int i = 0; i < n; i++) {
+                int d = g_vocab.daily_stats[start + i].date;
+                printf("%02d/%02d", (d / 100) % 100, d % 100);  // 正好5字符，对齐
+            }
+            printf("\n\n");
+
+            // 文字汇总：每天的具体数字
+            printf("%-10s %6s %6s %8s\n", "日期", "复习数", "正确数", "正确率");
+            printf("----------------------------------\n");
+            for (int i = 0; i < n; i++) {
+                DailyStat *ds = &g_vocab.daily_stats[start + i];
+                double rate = (ds->total_count == 0)? 0.0 : (double)ds->correct_count / ds->total_count * 100.0;
+                printf("%04d-%02d-%02d %-8d %-8d %.1f%%\n",ds->date / 10000,(ds->date / 100) % 100,ds->date % 100,ds->total_count,ds->correct_count,rate);
+            }
+        }
+
+        printf("\n按回车键返回主菜单...");
         getchar();
     }
