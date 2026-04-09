@@ -38,6 +38,7 @@ typedef struct {// 定义一个结构体类型Word，用于存储单词信息
     char english[MAX_STR];// 英文单词
     char chinese[MAX_STR];// 中文释义
     int level;// 单词记忆等级，用于表示单词的熟悉程度
+    float stability; // 记忆稳定性
     time_t last_review;// 上次复习时间，记录单词上次被复习的时间
     time_t next_review;// 下次复习时间，记录单词下次需要复习的时间
     int correct_count;// 正确记忆次数，记录用户正确记忆该单词的次数
@@ -53,8 +54,6 @@ typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库�
     DailyStat daily_stats[30];// 存储每天的复习统计信息的数组，最多可以存储30天的数据
     int daily_stats_count;// 当前存储的复习统计信息数量，记录已经存储了多少天的复习统计信息
 } Vocab;
-
-
 
 
 typedef enum {// 定义一个枚举类型TestMode，用于表示单词测试的模式
@@ -83,6 +82,8 @@ void show_word_detail(Word *word); // 显示单词详细信息的函数
 int quiz_word(Word *word); // 单词测试函数，根据当前的测试模式调用相应的测试函数进行单词测试，返回1表示用户回答正确，返回0表示用户回答错误
 int quiz_cn_to_en(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
 int quiz_en_to_cn(Word *word); // 单词测试（英译中），返回1=正确，0=错误的函数
+
+void update_stability(Word *w, int is_correct, time_t now);// 更新单词的稳定性，根据用户的测试结果调整单词的稳定性
 void update_word_level(Word *word, int is_correct); // 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
 void review_words(); // 复习待复习单词主函数
 void select_test_mode(); // 选择测试模式的函数，允许用户选择中译英测试还是英译中测试
@@ -418,6 +419,7 @@ int main() {
         strncpy(new_word.chinese, zh, MAX_STR - 1); // 将输入的中文释义复制到新单词的chinese字段
         new_word.chinese[MAX_STR - 1] = '\0'; // 确保字符串以null结尾，防止溢出
         new_word.level = 0; // 初始化单词记忆等级为0
+        new_word.stability = LEVEL_0_INTERVAL; // 初始化记忆稳定性为300秒
         new_word.last_review = 0; // 初始化上次复习时间为0
         new_word.next_review = time(NULL); //表示新单词需要立即复习
         new_word.correct_count = 0; // 初始化正确记忆次数为0
@@ -469,6 +471,7 @@ int main() {
         printf("英文: %s\n", word->english); // 显示英文单词
         printf("中文: %s\n", word->chinese); // 显示中文
         printf("记忆等级: %d (最高7级)\n", word->level); // 显示单词记忆等级
+        printf("记忆稳定性: %.1f秒(%.2f小时)\n", word->stability, word->stability / 3600); // 显示单词记忆稳定性
         printf("上次复习: %s\n", last_review_str); // 显示单词的上次复习时间
         printf("下次复习: %s\n", next_review_str); // 显示单词的下次复习时间
         printf("正确次数：%d | 错误次数：%d\n", word->correct_count, word->wrong_count); // 显示单词的正确记忆次数和错误记忆次数
@@ -525,6 +528,37 @@ int main() {
             }
         }
     }
+
+    void update_stability(Word *w, int is_correct, time_t now) {// 动态更新单词的记忆稳定性（秒）
+        if (w->last_review == 0) {// 如果单词的上次复习时间为0，说明是新单词，设置记忆稳定性为300秒
+            w->stability = LEVEL_0_INTERVAL;// 300 秒
+            return;
+        }
+
+        double elapsed = difftime(now, w->last_review);// 计算从上次复习到现在的时间差，单位为秒
+        if (elapsed <= 0) elapsed = 1;// 如果时间差小于等于0，设置为1秒
+
+        int total = w->correct_count + w->wrong_count;// 计算总记忆次数
+        double historical_rate = (total == 0) ? 0 : (double)w->correct_count / total ;// 计算历史正确率，如果总记忆次数为0，设置为0
+        if (is_correct) {// 如果用户回答正确
+            double increase = elapsed / (w->stability + 1) * 0.1;// 计算增加的记忆稳定性
+            if (increase < 0.05) increase = 0.05;
+            w->stability *= (1.0 + increase);
+
+            if (w->stability > LEVEL_7_INTERVAL) w->stability = LEVEL_7_INTERVAL;// 如果记忆稳定性大于7级，设置为7级
+        } else {
+            // 如果用户回答错误,计算减少的记忆稳定性,根据历史正确率和时间差
+            double decrease = 0.3;
+            
+            if (elapsed < w->stability * 0.5) decrease = 0.5;// 如果时间差小于记忆稳定性，设置减少的记忆稳定性为0.5
+
+            if (historical_rate < 0.5) decrease = 0.2;// 如果历史正确率小于0.5，设置减少的记忆稳定性为0.2
+            w->stability *= (1.0 - decrease);// 计算减少的记忆稳定性
+
+            if (w->stability < LEVEL_0_INTERVAL) w->stability = LEVEL_0_INTERVAL;// 如果记忆稳定性小于0级，设置为0级
+
+        }
+    }
   
     void update_word_level(Word *word, int is_correct) {// 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
         if (word == NULL) return;
@@ -535,50 +569,19 @@ int main() {
         // 先更新等级与计数
         if (is_correct) {
             word->correct_count++;// 如果用户回答正确，增加正确记忆次数
-            word->level = (word->level < 7) ? word->level + 1 : 7;// 如果记忆等级小于7，增加等级
+            if (word->level < 7) word->level++;// 如果记忆等级小于7，增加等级
             word->is_mistake = 0;   // 标记单词为正确
         } else {
             word->wrong_count++;// 如果用户回答错误，增加错误记忆次数
-            word->is_mistake = 1;   // 标记单词为错题
             if (word->level > 0) {
                 word->level--;// 如果记忆等级大于0，减少等级
             }
+                word->is_mistake = 1;   // 标记单词为错题
         }
         
-        // 计算当前正确率（避免除以0）
-        int total = word->correct_count + word->wrong_count;
-        double correct_rate = (total == 0) ? 0.5 : (double)word->correct_count / total;
-
-        //基础间隔：从等级对应的常量获取
-        int base_interval;
-        switch (word->level) {// 根据单词的记忆等级设置下次复习时间，使用预定义的复习间隔常量
-            case 0: base_interval = LEVEL_0_INTERVAL; break;
-            case 1: base_interval = LEVEL_1_INTERVAL; break;
-            case 2: base_interval = LEVEL_2_INTERVAL; break;
-            case 3: base_interval = LEVEL_3_INTERVAL; break;
-            case 4: base_interval = LEVEL_4_INTERVAL; break;
-            case 5: base_interval = LEVEL_5_INTERVAL; break;
-            case 6: base_interval = LEVEL_6_INTERVAL; break;
-            case 7: base_interval = LEVEL_7_INTERVAL; break;
-            default: base_interval = LEVEL_0_INTERVAL;
-        }
-
-        //计算下次复习时间
-        if (is_correct) {
-            //根据正确率动态延长间隔（正确率>80%间隔×1.2，否则不变）
-            if (correct_rate > 0.8) {
-                base_interval = (int)(base_interval * 1.2);
-            }
-        } else {
-            //根据正确率缩短间隔（正确率<60% 间隔×0.5，否则不变）
-            if (correct_rate < 0.6 && total > 0) {
-                base_interval = (int)(base_interval * 0.5);
-                if (base_interval < LEVEL_0_INTERVAL) {
-                    base_interval = LEVEL_0_INTERVAL;//间隔最短不低于5分钟
-                }
-            }    
-        }
-        word->next_review = now + base_interval;// 根据base_interval设置下次复习时间
+        // 再更新下次复习时间
+        update_stability(word, is_correct, now);// 更新单词的记忆稳定性
+        word->next_review = now + (time_t)word->stability;// 计算下次复习时间
     }
   
     void review_words() {// 复习待复习单词主函数(使用临时指针数组排序)
