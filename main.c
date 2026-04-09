@@ -4,6 +4,7 @@
 #include<ctype.h>
 #include<time.h>
 #include<windows.h>
+#include<math.h>
 
 // 常量定义
 #define MAX_WORD 2000// 最多存储2000个单词
@@ -89,7 +90,8 @@ void review_words(); // 复习待复习单词主函数
 void select_test_mode(); // 选择测试模式的函数，允许用户选择中译英测试还是英译中测试
 
 void show_review_rank();//复习排行榜
-int compare_word_ptr_by_review(const void *a, const void *b);//比较函数
+double forgetting_probability(Word *w, time_t now);//计算忘记概率(越高表示越容易忘记)
+int compare_word_ptr_by_forgetting(const void *a, const void *b);//比较函数
 
 void review_mistakes();// 专项复习错题
 void trim(char *str);// 去除字符串两端的空格
@@ -619,7 +621,7 @@ int main() {
         getchar();
 
         // 对指针数组按复习紧迫度排序（使用compare_word_ptr函数作为比较函数）
-        qsort(to_review, to_review_count, sizeof(Word *), compare_word_ptr_by_review);
+        qsort(to_review, to_review_count, sizeof(Word *), compare_word_ptr_by_forgetting);
 
         // 复习单词
         int reviewed = 0, correct = 0;
@@ -713,8 +715,8 @@ int main() {
             return;
         }
 
-        //第二步：按紧迫度排序（升序，即 next_review 小的在前）
-        qsort(need_words, need_count, sizeof(Word*),compare_word_ptr_by_review);
+        //第二步：按紧迫度排序（升序，即 next_review 小的在前）(遗忘概率高的在前)
+        qsort(need_words, need_count, sizeof(Word*), compare_word_ptr_by_forgetting);
 
         //分页显示
         int page_size = 10;
@@ -787,9 +789,25 @@ int main() {
             } while (choice != 'q');
     }
 
-    int compare_word_ptr_by_review(const void *a, const void *b) {//比较函数
+    double forgetting_probability(Word *w, time_t now) {
+        if (w->last_review == 0) return 1.0;// 从未复习，肯定遗忘
+        double elapsed = difftime(now, w->last_review);// 计算从上次复习到现在的时间差，单位为秒
+        if (elapsed <= 0) return 1.0;// 如果时间差小于等于0，肯定遗忘
+
+        // 计算遗忘概率 R = exp(-elapsed / stability)
+        double R = exp(-elapsed / w->stability);// 计算遗忘概率
+        if (R < 0) R = 0;// 如果遗忘概率小于0，设置为0
+        if (R > 1) R = 1;// 如果遗忘概率大于1，设置为1
+        return R;
+    }
+    int compare_word_ptr_by_forgetting(const void *a, const void *b) {//比较函数
         Word *wa = *(Word **)a;
         Word *wb = *(Word **)b;
+        time_t now = time(NULL);// 获取当前时间
+        double pa = forgetting_probability(wa, now);// 计算遗忘概率
+        double pb = forgetting_probability(wb, now);// 计算遗忘概率
+        if (pa > pb) return -1;// 概率高的在前
+        if (pa < pb) return 1;
         if (wa->next_review < wb->next_review) return -1;
         if (wa->next_review > wb->next_review) return 1;
         return 0;
