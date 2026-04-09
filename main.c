@@ -605,6 +605,7 @@ int main() {
             double decrease = (double)g_vocab.loss;
             if (elapsed < w->stability * 0.5) decrease *= 1.5;// 如果时间差小于记忆稳定性，设置减少的记忆稳定性为1.5倍
             if (historical_rate < 0.5) decrease *= 0.7;// 如果历史正确率小于0.5，设置减少的记忆稳定性为0.7倍
+            if (decrease > 0.95) decrease = 0.95;// 防止stability过大
             w->stability *= (float)(1.0 - decrease);// 计算减少的记忆稳定性
             if (w->stability < LEVEL_0_INTERVAL) w->stability = LEVEL_0_INTERVAL;// 如果记忆稳定性小于0级，设置为0级
         }
@@ -855,8 +856,8 @@ int main() {
         time_t now = time(NULL);// 获取当前时间
         double pa = forgetting_probability(wa, now);// 计算遗忘概率
         double pb = forgetting_probability(wb, now);// 计算遗忘概率
-        if (pa > pb) return -1;// 概率高的在前
-        if (pa < pb) return 1;
+        if (pa < pb) return -1;// R 小= 遗忘概率大
+        if (pa > pb) return 1;
         if (wa->next_review < wb->next_review) return -1;
         if (wa->next_review > wb->next_review) return 1;
         return 0;
