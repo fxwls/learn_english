@@ -54,6 +54,9 @@ typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库�
     int checksum;// 校验和，用于检测词库文件是否损坏
     DailyStat daily_stats[30];// 存储每天的复习统计信息的数组，最多可以存储30天的数据
     int daily_stats_count;// 当前存储的复习统计信息数量，记录已经存储了多少天的复习统计信息
+    float gain;// 答对时稳定性增长系数，初始值为0.10
+    float loss;// 答错时稳定性减少系数，初始值为0.30
+    int total_review;// 总复习次数
 } Vocab;
 
 
@@ -84,6 +87,7 @@ int quiz_word(Word *word); // 单词测试函数，根据当前的测试模式�
 int quiz_cn_to_en(Word *word); // 单词测试（中译英），返回1=正确，0=错误的函数
 int quiz_en_to_cn(Word *word); // 单词测试（英译中），返回1=正确，0=错误的函数
 
+void calibrate_params(Word *w, int is_correct, time_t now);// 校准单词的参数
 void update_stability(Word *w, int is_correct, time_t now);// 更新单词的稳定性，根据用户的测试结果调整单词的稳定性
 void update_word_level(Word *word, int is_correct); // 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
 void review_words(); // 复习待复习单词主函数
@@ -115,6 +119,8 @@ DailyStat* get_today_daily_stat();// 获取今天的日志
 void write_daily_log();// 写入日志
 void show_statistics();// 显示复习统计
 
+void reset_learning_params();// 重置学习参数
+
 // 主函数
 int main() {
 
@@ -128,6 +134,9 @@ int main() {
 
     memset(&g_vocab, 0, sizeof(Vocab)); // 初始化全局变量g_vocab的内存空间，确保所有字段都被初始化为0，避免内存垃圾值导致崩溃
     g_vocab.count = 0;// 初始化单词数量为0，表示当前没有存储任何单词
+    g_vocab.gain = 0.10f;// 初始化答对时稳定性增长系数为0.10
+    g_vocab.loss = 0.30f;// 初始化答错时稳定性减少系数为0.30
+    g_vocab.total_review = 0;// 初始化总复习次数为0，表示当前没有进行任何复习操作
     load_vocab(); // 从文件中加载单词信息到全局变量g_vocab中
     printf("按回车键继续...");
     getchar(); // 等待用户按下回车键继续操作
@@ -152,7 +161,7 @@ int main() {
         printf("3.查看待复习排行榜\n");
         printf("4.专项复习错题\n");
         printf("5.学习统计可视化\n");
-        printf("6.新建/切换词库/从备份恢复词库\n");
+        printf("6.新建/切换词库/从备份恢复词库/重置学习参数\n");
         printf("7.退出系统\n");
         printf("请输入你的选择(1/2/3/4/5/6/7): ");
 
@@ -183,7 +192,8 @@ int main() {
                 printf("1.新建词库\n");
                 printf("2.切换词库\n");
                 printf("3.从备份恢复词库\n");
-                printf("请输入你的选择(1/2/3): ");
+                printf("4.重置学习参数为默认值\n");
+                printf("请输入你的选择(1/2/3/4): ");
                 int sub_choice;
                 if (scanf("%d", &sub_choice) != 1) {// 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
                     sub_choice = 0;
@@ -199,6 +209,9 @@ int main() {
                         break;
                     case 3:
                         restore_vocab();
+                        break;
+                    case 4:
+                        reset_learning_params();
                         break;
                     default:
                         printf("无效的选择，请重新输入！\n");
@@ -351,6 +364,9 @@ int main() {
         if (g_vocab.daily_stats_count < 0 || g_vocab.daily_stats_count > 30) {
             g_vocab.daily_stats_count = 0;
         }
+        if (g_vocab.gain < 0.01f || g_vocab.gain > 1.0f) g_vocab.gain = 0.10f;
+        if (g_vocab.loss < 0.01f || g_vocab.loss > 0.99f) g_vocab.loss = 0.30f;
+        if (g_vocab.total_review < 0) g_vocab.total_review = 0;
 
         printf("已加载词库文件：%s\n", g_current_vocab_file);// 提示用户加载的词库文件名
         printf("已加载 %d个单词!\n", g_vocab.count); // 打印加载的单词数量
@@ -531,34 +547,66 @@ int main() {
         }
     }
 
+    void calibrate_params(Word *w, int is_correct, time_t now) {// 校准单词的参数
+        if (w->last_review == 0) {
+            return;
+        }
+
+        double elapsed = difftime(now, w->last_review);// 计算从上次复习到现在的时间差，单位为秒
+        if (elapsed <= 0) return;// 如果时间差小于等于0，返回，不进行校准
+
+        double R = exp(-elapsed / w->stability);// 计算遗忘概率
+        double predicted = R;
+        double actual = is_correct ? 1.0 : 0.0;// 根据用户回答是否正确计算实际正确率
+        double error = actual - predicted;// 计算预测错误率(正：低估用户，负：高估用户)
+
+        double lr = 0.05 / (1.0 + g_vocab.total_review / 500.0);// 初始0.05，每500次复习减半
+        if (lr < 0.002) lr = 0.002;// 最低学习率0.002
+
+        float raw_gain = g_vocab.gain;// 记录原始增长系数
+        float raw_loss = g_vocab.loss;// 记录原始减少系数
+
+        if (is_correct) {// 如果用户回答正确
+            raw_gain += (float)(lr * error);// 更新增长系数
+        } else {
+            raw_loss -= (float)(lr * error);// 更新增加系数
+        }
+
+        if (raw_gain < 0.02f) raw_gain = 0.02f;
+        if (raw_gain > 0.50f) raw_gain = 0.50f;
+        if (raw_loss < 0.05f) raw_loss = 0.05f;
+        if (raw_loss > 0.80f) raw_loss = 0.80f;
+
+        float alpha = 0.3f;// 指数移动平均平滑
+        g_vocab.gain = alpha * raw_gain + (1.0f - alpha) * g_vocab.gain;// 更新增长系数
+        g_vocab.loss = alpha * raw_loss + (1.0f - alpha) * g_vocab.loss;// 更新减少系数
+    }
+
     void update_stability(Word *w, int is_correct, time_t now) {// 动态更新单词的记忆稳定性（秒）
         if (w->last_review == 0) {// 如果单词的上次复习时间为0，说明是新单词，设置记忆稳定性为300秒
             w->stability = LEVEL_0_INTERVAL;// 300 秒
             return;
         }
 
+        calibrate_params(w, is_correct, now);// 先校准单词的参数
+
         double elapsed = difftime(now, w->last_review);// 计算从上次复习到现在的时间差，单位为秒
         if (elapsed <= 0) elapsed = 1;// 如果时间差小于等于0，设置为1秒
 
         int total = w->correct_count + w->wrong_count;// 计算总记忆次数
         double historical_rate = (total == 0) ? 0 : (double)w->correct_count / total ;// 计算历史正确率，如果总记忆次数为0，设置为0
-        if (is_correct) {// 如果用户回答正确
-            double increase = elapsed / (w->stability + 1) * 0.1;// 计算增加的记忆稳定性
-            if (increase < 0.05) increase = 0.05;
-            w->stability *= (1.0 + increase);
 
+        if (is_correct) {// 如果用户回答正确
+            double increase = elapsed / (w->stability + 1) * (double)g_vocab.gain;// 计算增加的记忆稳定性
+            if (increase < 0.02) increase = 0.02;// 如果增加的记忆稳定性小于0.02，设置为0.02
+            w->stability *= (float)(1.0 + increase);// 计算增加的记忆稳定性
             if (w->stability > LEVEL_7_INTERVAL) w->stability = LEVEL_7_INTERVAL;// 如果记忆稳定性大于7级，设置为7级
         } else {
-            // 如果用户回答错误,计算减少的记忆稳定性,根据历史正确率和时间差
-            double decrease = 0.3;
-            
-            if (elapsed < w->stability * 0.5) decrease = 0.5;// 如果时间差小于记忆稳定性，设置减少的记忆稳定性为0.5
-
-            if (historical_rate < 0.5) decrease = 0.2;// 如果历史正确率小于0.5，设置减少的记忆稳定性为0.2
-            w->stability *= (1.0 - decrease);// 计算减少的记忆稳定性
-
+            double decrease = (double)g_vocab.loss;
+            if (elapsed < w->stability * 0.5) decrease *= 1.5;// 如果时间差小于记忆稳定性，设置减少的记忆稳定性为1.5倍
+            if (historical_rate < 0.5) decrease *= 0.7;// 如果历史正确率小于0.5，设置减少的记忆稳定性为0.7倍
+            w->stability *= (float)(1.0 - decrease);// 计算减少的记忆稳定性
             if (w->stability < LEVEL_0_INTERVAL) w->stability = LEVEL_0_INTERVAL;// 如果记忆稳定性小于0级，设置为0级
-
         }
     }
   
@@ -633,10 +681,11 @@ int main() {
             // 进行单词测试，获取用户的测试结果
             int is_correct = quiz_word(word);
             if (is_correct == -1) {
-                break;// 如果用户输入q，退出复习
+                break;// 如果用户输入q，退出复习循环
             }
             if (is_correct == 1) correct++;
             reviewed++;
+            g_vocab.total_review++;// 总复习次数加一
         
             // 更新单词状态
             update_word_level(word, is_correct);
@@ -941,6 +990,8 @@ int main() {
             sum += vocab->daily_stats[i].correct_count;
             sum += vocab->daily_stats[i].total_count;
         }
+        sum += (int)(vocab->gain * 1000);
+        sum += (int)(vocab->loss * 1000);
         return sum;
     }
 
@@ -1300,6 +1351,12 @@ int main() {
     void show_statistics() {// 显示复习统计的函数，统计最近7天的复习数量，并以图表形式显示每天的复习单词数和正确率趋势，同时提供文字汇总每天的具体数字
         clear_screen();
         printf("\n=======复习统计=======\n");
+        // 先展示学习率
+        printf("累计复习总次数：%d\n", g_vocab.total_review);
+        double current_lr = 0.05 / (1.0 + g_vocab.total_review / 500.0);
+        if (current_lr < 0.002) current_lr = 0.002;
+        printf("当前学习率：%.4f\n", current_lr);
+
         time_t now = time(NULL);
         int dates[7];
         int counts[7] = {0};
@@ -1381,6 +1438,39 @@ int main() {
             }
         }
 
+        printf("\n【系统自适应参数】\n");
+        printf("答对增长系数(gain): %.4f\n", g_vocab.gain);
+        int gain_bar = (int)(g_vocab.gain / 0.50f * 20);
+        for (int i = 0; i < gain_bar; i++) {
+            putchar('#');
+        }
+        printf("\n");
+
+        printf("答错减少系数(loss): %.4f\n", g_vocab.loss);
+        int loss_bar = (int)(g_vocab.loss / 0.50f * 20);
+        for (int i = 0; i < loss_bar; i++) {
+            putchar('#');
+        }
+        printf("\n");
+        printf("(参数范围：gain[0.02~0.50], loss[0.05~0.80]), 使用越多越精准\n");
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
+
+    void reset_learning_params() {
+        printf("\n=====重置学习参数=====\n");
+        printf("当前 gain: %.4f, loss: %.4f\n", g_vocab.gain, g_vocab.loss);
+        printf("确认重置为默认值(gain=0.10, loss=0.30)吗?(y/n)");
+        char confirm[10];
+        safe_input(confirm, sizeof(confirm));
+        if (tolower(confirm[0]) == 'y') {
+            g_vocab.gain = 0.10f;
+            g_vocab.loss = 0.30f;
+            save_vocab();
+            printf("学习参数已重置为默认值。\n");
+        } else {
+            printf("取消重置学习参数。\n");
+        }
         printf("\n按回车键返回主菜单...");
         getchar();
     }
