@@ -5,6 +5,8 @@
 #include<time.h>
 #include<windows.h>
 #include<math.h>
+#include<sys/stat.h>
+#include<errno.h>
 
 // 常量定义
 #define MAX_WORD 2000// 最多存储2000个单词
@@ -21,9 +23,7 @@
 #define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
 //加密
 #define ENCRYPT_KEY 0x7B// 加密密钥
-// 文件名定义(可自定义词库名称，但请勿修改文件扩展名，保持为.dat以启用加密功能)
-char g_current_vocab_file[256] = "vocab.dat";// 当前词库文件名
-char g_current_backup_vocab_file[300] = "vocab_backup.dat";// 备份词库文件名
+
 
 
 
@@ -68,6 +68,11 @@ TestMode current_test_mode = MODE_CN_TO_EN; // 当前的测试模式，默认为
 
 // 全局变量
 Vocab g_vocab = {.count = 0};// 全局变量，存储当前的单词信息，初始化单词数量为0, 显性初始化结构体，确保所有字段都被正确初始化
+time_t g_mock_time = 0;// 全局变量，存储模拟时间，初始值为0
+// 文件名定义(可自定义词库名称，但请勿修改文件扩展名，保持为.dat以启用加密功能)
+char g_current_vocab_file[256] = "vocab.dat";// 当前词库文件名
+char g_current_backup_vocab_file[300] = "vocab_backup.dat";// 备份词库文件名
+
 
 // 函数声明
 void clear_screen(); // 清屏函数，清除控制台上的内容
@@ -121,6 +126,11 @@ void show_statistics();// 显示复习统计
 
 void reset_learning_params();// 重置学习参数
 
+
+time_t get_current_time(void);// 获取模拟时间
+void set_mock_time();// 设置模拟时间
+
+
 // 主函数
 int main() {
 
@@ -161,7 +171,7 @@ int main() {
         printf("3.查看待复习排行榜\n");
         printf("4.专项复习错题\n");
         printf("5.学习统计可视化\n");
-        printf("6.新建/切换词库/从备份恢复词库/重置学习参数\n");
+        printf("6.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间\n");
         printf("7.退出系统\n");
         printf("请输入你的选择(1/2/3/4/5/6/7): ");
 
@@ -193,7 +203,8 @@ int main() {
                 printf("2.切换词库\n");
                 printf("3.从备份恢复词库\n");
                 printf("4.重置学习参数为默认值\n");
-                printf("请输入你的选择(1/2/3/4): ");
+                printf("5.时间模拟测试\n");
+                printf("请输入你的选择(1/2/3/4/5): ");
                 int sub_choice;
                 if (scanf("%d", &sub_choice) != 1) {// 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
                     sub_choice = 0;
@@ -212,6 +223,9 @@ int main() {
                         break;
                     case 4:
                         reset_learning_params();
+                        break;
+                    case 5:
+                        set_mock_time();
                         break;
                     default:
                         printf("无效的选择，请重新输入！\n");
@@ -439,7 +453,7 @@ int main() {
         new_word.level = 0; // 初始化单词记忆等级为0
         new_word.stability = LEVEL_0_INTERVAL; // 初始化记忆稳定性为300秒
         new_word.last_review = 0; // 初始化上次复习时间为0
-        new_word.next_review = time(NULL); //表示新单词需要立即复习
+        new_word.next_review = get_current_time(); //表示新单词需要立即复习
         new_word.correct_count = 0; // 初始化正确记忆次数为0
         new_word.wrong_count = 0; // 初始化错误记忆次数为0
 
@@ -459,7 +473,7 @@ int main() {
      
     int get_need_review_count() {// 获取需要复习的单词数量的函数
         int count = 0;
-        time_t now = time(NULL);// 获取当前时间
+        time_t now = get_current_time();// 获取当前时间
         // 遍历当前存储的单词信息数组
         for (int i = 0; i < g_vocab.count; i++) {
             if (g_vocab.words[i].next_review <= now) {// 如果单词的下次复习时间小于或等于当前时间，说明需要复习
@@ -614,7 +628,7 @@ int main() {
     void update_word_level(Word *word, int is_correct) {// 更新单词记忆等级和复习时间的函数，根据用户的测试结果调整单词的记忆等级，并计算下次复习时间
         if (word == NULL) return;
 
-        time_t now = time(NULL);// 获取当前时间
+        time_t now = get_current_time();// 获取当前时间
         word->last_review = now;// 更新单词的上次复习时间为当前时间
 
         // 先更新等级与计数
@@ -647,7 +661,7 @@ int main() {
             return;
         }
         printf("\n=======单词复习=======\n");
-        time_t now = time(NULL);// 获取当前时间
+        time_t now = get_current_time();// 获取当前时间
         Word *to_review[MAX_WORD];// 定义一个指针数组，用于存储需要复习的单词的指针
         int to_review_count = 0;// 定义一个整数变量，用于记录需要复习的单词数量
 
@@ -747,7 +761,7 @@ int main() {
         clear_screen();
         printf("\n===========待复习单词排行榜===========\n");
 
-        time_t now = time(NULL);
+        time_t now = get_current_time();
         //第一步：统计待复习数量
         int need_count = 0;
         Word *need_words[MAX_WORD];// 指针数组
@@ -853,7 +867,7 @@ int main() {
     int compare_word_ptr_by_forgetting(const void *a, const void *b) {//比较函数
         Word *wa = *(Word **)a;
         Word *wb = *(Word **)b;
-        time_t now = time(NULL);// 获取当前时间
+        time_t now = get_current_time();// 获取当前时间
         double pa = forgetting_probability(wa, now);// 计算遗忘概率
         double pb = forgetting_probability(wb, now);// 计算遗忘概率
         if (pa < pb) return -1;// R 小= 遗忘概率大
@@ -961,7 +975,7 @@ int main() {
     }
 
     int get_today() {// 获取今天的日期，返回一个整数表示日期，格式为YYYYMMDD
-        return time_to_date(time(NULL)); // 获取当前时间的时间戳，并转换为日期格式
+        return time_to_date(get_current_time()); // 获取当前时间的时间戳，并转换为日期格式
     }
 
     void encrypt_data(void *data, int len) {// 加密数据的函数，使用简单的异或加密方法对数据进行加密
@@ -1358,7 +1372,7 @@ int main() {
         if (current_lr < 0.002) current_lr = 0.002;
         printf("当前学习率：%.4f\n", current_lr);
 
-        time_t now = time(NULL);
+        time_t now = get_current_time();
         int dates[7];
         int counts[7] = {0};
         for (int i = 0; i < 7; i++) {
@@ -1476,4 +1490,66 @@ int main() {
         getchar();
     }
 
-    
+    time_t get_current_time(void) {// 获取当前时间
+    if (g_mock_time > 0) return g_mock_time;
+    return time(NULL);
+}
+
+    void set_mock_time(void) {// 设置模拟时间
+        printf("\n=====设置模拟时间=====\n");
+        printf("当前时间: %s\n", ctime(&(time_t){get_current_time()}));
+        printf("1. 增加指定小时\n");
+        printf("2. 增加指定分钟\n");
+        printf("3. 增加指定秒数\n");
+        printf("4. 增加指定天数\n");
+        printf("5. 重置为真实时间\n");
+        printf("请输入你的选择(1-5): ");
+        int choice;
+        if (scanf("%d", &choice) != 1) {
+            while(getchar() != '\n');
+            return;
+        } 
+        getchar();
+        if (choice < 1 || choice > 5) {
+            printf("无效的选择，将返回。\n");
+            return;
+        }
+
+        // 如果没有设置过模拟时间,那么设置模拟时间为当前时间
+        if (g_mock_time == 0) {
+            g_mock_time = time(NULL);
+        }
+
+        int delta;
+        switch(choice) {
+            case 1:
+                printf("增加的小时数: ");
+                scanf("%d", &delta);
+                g_mock_time += delta * 3600;
+                break;
+            case 2:
+                printf("增加的分钟数: ");
+                scanf("%d", &delta);
+                g_mock_time += delta * 60;
+                break;
+            case 3:
+                printf("增加的秒数: ");
+                scanf("%d", &delta);
+                g_mock_time += delta;
+                break;
+            case 4:
+                printf("增加的天数: ");
+                scanf("%d", &delta);
+                g_mock_time += delta * 86400;
+                break;
+            case 5:
+                g_mock_time = 0;
+                break;
+            default:
+                printf("无效的选择，将返回。\n");
+                return;
+        }
+        printf("新模拟时间: %s\n", ctime(&(time_t){get_current_time()}));
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    } 
