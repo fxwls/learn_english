@@ -44,7 +44,7 @@ typedef struct {// 定义一个结构体类型Word，用于存储单词信息
     time_t next_review;// 下次复习时间，记录单词下次需要复习的时间
     int correct_count;// 正确记忆次数，记录用户正确记忆该单词的次数
     int wrong_count;// 错误记忆次数，记录用户错误记忆该单词的次数
-    int is_mistake;// 错题判断
+    int is_mistake;// 错词判断
 } Word;
     
 typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库的信息
@@ -102,7 +102,7 @@ void show_review_rank();//复习排行榜
 double forgetting_probability(Word *w, time_t now);//计算忘记概率(越高表示越容易忘记)
 int compare_word_ptr_by_forgetting(const void *a, const void *b);//比较函数
 
-void review_mistakes();// 专项复习错题
+void review_mistakes();// 专项复习错词
 void trim(char *str);// 去除字符串两端的空格
 
 int time_to_date(time_t t);// 时间戳转换为日期（年月日）的函数，返回一个整数表示日期，格式为YYYYMMDD
@@ -169,7 +169,7 @@ int main() {
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
         printf("3.查看待复习排行榜\n");
-        printf("4.专项复习错题\n");
+        printf("4.专项复习错词\n");
         printf("5.学习统计可视化\n");
         printf("6.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间\n");
         printf("7.退出系统\n");
@@ -191,7 +191,7 @@ int main() {
             case 3:// 如果用户选择3，打开复习排行榜
                 show_review_rank();
                 break;
-            case 4:// 如果用户选择4，打开专项复习错题
+            case 4:// 如果用户选择4，打开专项复习错词
                 review_mistakes();
                 break;
             case 5:// 如果用户选择5，进入学习统计可视化的流程
@@ -366,7 +366,6 @@ int main() {
                 printf("警告：检测到词库文件异常！可能已被篡改或损坏！\n");
                 printf("建议：删除 %s 文件后重新运行程序，或从备份文件恢复数据！\n", g_current_vocab_file);
                 printf("======================================\n");
-                fclose(fp);
                 memset(&g_vocab, 0, sizeof(Vocab));// 如果文件异常，清空当前的词库信息，防止使用损坏的数据进行复习
                 g_vocab.count = 0;
                 return;
@@ -522,8 +521,8 @@ int main() {
         printf("\n【中译英】%s\n", word->chinese); // 提示用户输入单词的英文翻译
         while(1) {//
             if (!safe_input(input,MAX_STR)) {// 
-                printf("输入不能为空，请重新输入(按q退出)！\n");
-                continue;
+                printf("输入为空，回答错误(按q退出)！\n正确答案是：%s\n", word->english);
+                return 0;
             }
             trim(input);// 去除字符串两端的空格
             if (strcasecmp_custom(input,"q") == 0) {
@@ -544,8 +543,8 @@ int main() {
         printf("\n【英译中】%s\n", word->english); // 提示用户输入单词的中文释义
         while(1) {
             if (!safe_input(input,MAX_STR)) {// 如果输入无效，提示用户重新输入，直到输入有效为止
-                printf("输入不能为空，请重新输入！\n");
-                continue;
+                printf("输入为空，回答错误(按q退出)！\n正确答案是：%s\n", word->chinese);
+                return 0;
             }
             trim(input);// 去除字符串两端的空格
             if (strcasecmp_custom(input, "q") == 0) {
@@ -641,7 +640,7 @@ int main() {
             if (word->level > 0) {
                 word->level--;// 如果记忆等级大于0，减少等级
             }
-                word->is_mistake = 1;   // 标记单词为错题
+                word->is_mistake = 1;   // 标记单词为错词
         }
         
         // 再更新下次复习时间
@@ -691,12 +690,19 @@ int main() {
         for (int i = 0; i < to_review_count; i++) {
             Word *word = to_review[i];
             clear_screen();
-            printf("【复习进度】%d/%d\n", reviewed + 1, to_review_count);
+            printf("【复习进度】%d/%d(输入q退出复习)\n", reviewed + 1, to_review_count);
 
             // 进行单词测试，获取用户的测试结果
             int is_correct = quiz_word(word);
             if (is_correct == -1) {
-                break;// 如果用户输入q，退出复习循环
+                printf("确认退出复习吗?(y/n)");
+                char confirm[10];
+                if (safe_input(confirm, sizeof(confirm)) && tolower(confirm[0]) == 'y') {
+                    break;
+                } else {
+                    i--;
+                    continue;
+                }
             }
             if (is_correct == 1) correct++;
             reviewed++;
@@ -707,14 +713,22 @@ int main() {
         
 
             printf("\n按回车键继续复习（输入q退出复习）...");
-            char quit[10];
-            safe_input(quit, sizeof(quit));
-            if (strcasecmp_custom(quit, "q") == 0) {
-                printf("确定退出复习吗？（y/n）");
+            char line[16];
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                continue;
+            }
+            trim_newline(line);
+
+            if (strcasecmp_custom(line, "q") == 0) {
+                printf("确认退出复习吗?(y/n)");
                 char confirm[10];
-                safe_input(confirm, sizeof(confirm));
-                if (tolower(confirm[0]) == 'y')
-                break; // 如果用户输入q，退出复习循环
+                if (safe_input(confirm, sizeof(confirm)) && tolower(confirm[0]) == 'y') {
+                        break;
+                }
+            } else if (strlen(line) > 0) {
+                printf("无效的输入，请按回车键继续复习...\n");
+                int ch;
+                while ((ch = getchar()) != '\n' && ch != EOF);
             }
 
         }
@@ -877,11 +891,11 @@ int main() {
         return 0;
     }
 
-    void review_mistakes() {// 专项复习错题的函数，统计错题数量，选择测试模式，按照单词ID顺序复习错题，并更新单词状态和当天统计数据
+    void review_mistakes() {// 专项复习错词的函数，统计错词数量，选择测试模式，按照单词ID顺序复习错词，并更新单词状态和当天统计数据
         clear_screen();
-        printf("\n=======专项复习错题本======\n");
+        printf("\n=======专项复习错词本======\n\n\n");
 
-        // 统计错题数量
+        // 统计错词数量
         int mistake_count = 0;
         for (int i = 0; i < g_vocab.count; i++) {
             if (g_vocab.words[i].is_mistake == 1) {
@@ -889,18 +903,18 @@ int main() {
             }
         }
         if (mistake_count == 0) {
-            printf("当前没有需要复习的错题，恭喜！\n");
+            printf("当前没有需要复习的错词，恭喜！\n");
             printf("按回车键返回主菜单...\n");
             getchar();
             return;
         }
 
-        printf("待复习错题数量:%d\n", mistake_count);
+        printf("待复习错词数量:%d\n", mistake_count);
         select_test_mode(); // 选择测试模式，允许用户选择中译英测试还是英译中测试
         printf("按回车键开始复习...\n");
         getchar();
 
-        // 为了方便，我们按照单词ID的顺序复习错题
+        // 为了方便，我们按照单词ID的顺序复习错词
         int reviewed = 0, correct = 0;
         for (int i = 0; i < g_vocab.count; i++) {
             Word *word = &g_vocab.words[i];
@@ -909,12 +923,19 @@ int main() {
             }
 
             clear_screen();
-            printf("【错题复习进度】%d/%d\n", reviewed + 1, mistake_count);
+            printf("【错词复习进度】%d/%d\n", reviewed + 1, mistake_count);
 
             // 进行测试
             int is_correct = quiz_word(word);
             if (is_correct == -1) {
-                break;// 如果用户选择退出，跳出循环
+                printf("确认退出错词复习吗?(y/n)\n");
+                char confirm[10];
+                if (safe_input(confirm, sizeof(confirm)) && tolower(confirm[0]) == 'y') {
+                    break;
+                } else {
+                    i--;
+                    continue;
+                }
             }
             if (is_correct == 1) {
                 correct++;
@@ -925,11 +946,23 @@ int main() {
 
             // 按回车键继续复习
             printf("按回车键继续复习(输入q退出)...\n");
-            char quit[10];
-            safe_input(quit, sizeof(quit));
-            if (strcasecmp_custom(quit, "q") == 0) {
-                break;
-            }   
+            char line[16];
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                continue;// 读取失败，下一个
+            }
+            trim_newline(line);
+
+            if (strcasecmp_custom(line, "q") == 0) {
+                printf("确认退出错词复习吗?(y/n)\n");
+                char confirm[10];
+                if (safe_input(confirm, sizeof(confirm)) && tolower(confirm[0]) == 'y') {
+                    break;
+                }
+            } else if (strlen(line) > 0){
+                printf("无效输入，请按回车继续...\n");
+                int ch;
+                while ((ch = getchar()) != '\n' && ch != EOF);
+            }
         }
         
         // 保存更改
@@ -942,7 +975,7 @@ int main() {
             save_vocab(); // 保存词库状态，确保统计数据也被保存
             write_daily_log();// 将当天的统计数据写入日志文件，便于后续分析和查看复习历史
         }
-        printf("\n错题复习完成！本次复习：%d个单词，正确率：%.2f%%\n", reviewed,(reviewed > 0) ? (correct * 100.0 / reviewed) : 0.0);
+        printf("\n错词复习完成！本次复习：%d个单词，正确率：%.2f%%\n", reviewed,(reviewed > 0) ? (correct * 100.0 / reviewed) : 0.0);
         printf("按回车键返回主菜单...\n");
         getchar();
     }
@@ -1509,7 +1542,8 @@ int main() {
             while(getchar() != '\n');
             return;
         } 
-        getchar();
+        while (getchar() != '\n');// 清除输入缓冲区中的换行符
+
         if (choice < 1 || choice > 5) {
             printf("无效的选择，将返回。\n");
             return;
@@ -1525,21 +1559,25 @@ int main() {
             case 1:
                 printf("增加的小时数: ");
                 scanf("%d", &delta);
+                while (getchar() != '\n');
                 g_mock_time += delta * 3600;
                 break;
             case 2:
                 printf("增加的分钟数: ");
                 scanf("%d", &delta);
+                while (getchar() != '\n');
                 g_mock_time += delta * 60;
                 break;
             case 3:
                 printf("增加的秒数: ");
                 scanf("%d", &delta);
+                while (getchar() != '\n');
                 g_mock_time += delta;
                 break;
             case 4:
                 printf("增加的天数: ");
                 scanf("%d", &delta);
+                while (getchar() != '\n');
                 g_mock_time += delta * 86400;
                 break;
             case 5:
