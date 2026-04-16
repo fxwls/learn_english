@@ -136,6 +136,7 @@ void set_mock_time();// 设置模拟时间
 void set_daily_goal();// 设置每日学习目标
 
 void browse_all_words();// 浏览所有单词
+void search_word();// 搜索单词
 
 
 // 主函数
@@ -176,12 +177,13 @@ int main() {
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
         printf("3.查看所以单词\n");
-        printf("4.查看待复习排行榜\n");
-        printf("5.专项复习错词\n");
-        printf("6.学习统计可视化\n");
-        printf("7.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
-        printf("8.退出系统\n");
-        printf("请输入你的选择(1/2/3/4/5/6/7/8): ");
+        printf("4.搜索单词\n");
+        printf("5.查看待复习排行榜\n");
+        printf("6.专项复习错词\n");
+        printf("7.学习统计可视化\n");
+        printf("8.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
+        printf("9.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5/6/7/8/9): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -199,16 +201,19 @@ int main() {
             case 3:// 如果用户选择3，进入查看所有单词的流程
                 browse_all_words(); // 调用函数浏览所有单词
                 break;
-            case 4:// 如果用户选择4，打开复习排行榜
+            case 4:// 如果用户选择4，进入搜索单词的流程
+                search_word(); // 调用函数搜索单词
+                break;
+            case 5:// 如果用户选择5，打开复习排行榜
                 show_review_rank();
                 break;
-            case 5:// 如果用户选择5，打开专项复习错词
+            case 6:// 如果用户选择6，打开专项复习错词
                 review_mistakes();
                 break;
-            case 6:// 如果用户选择6，进入学习统计可视化的流程
+            case 7:// 如果用户选择7，进入学习统计可视化的流程
                 show_statistics();
                 break;
-            case 7:// 如果用户选择7，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
+            case 8:// 如果用户选择8，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
                 clear_screen();
                 printf("1.新建词库\n");
                 printf("2.切换词库\n");
@@ -248,7 +253,7 @@ int main() {
                         getchar();
                 }
                 break;
-            case 8:// 如果用户选择8，进入退出系统的流程
+            case 9:// 如果用户选择9，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -262,7 +267,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 8); // 循环直到用户选择退出系统
+    } while (choice != 9); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -1685,13 +1690,69 @@ int main() {
 
             if (choice == 'n' && current_page < total_pages) {
                 current_page++;
-            } else if (choice == 'p' && current_page > 1) {
+                } else if (choice == 'p' && current_page > 1) {
                 current_page--;
-            } else if (choice == 'q') {
+                } else if (choice == 'q') {
                 break;
             }
-    } while(1);
+        } while(1);
 
-    printf("\n按回车键返回主菜单...");
-    getchar();
-}
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
+
+    void search_word() {// 搜索单词的函数
+        clear_screen();
+        printf("\n=====搜索单词=====\n");
+
+        if (g_vocab.count == 0) {
+            printf("词库为空，无法搜索。\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+        char keyword[MAX_STR];
+        printf("请输入要搜索的关键词（英文单词或中文释义）: ");
+        safe_input(keyword, MAX_STR);
+
+        char key_lower[MAX_STR];
+        strncpy(key_lower, keyword, MAX_STR - 1);
+        key_lower[MAX_STR - 1] = '\0';
+        for (int i = 0; key_lower[i]; i++) {
+            key_lower[i] = tolower(key_lower[i]);
+        }
+
+        int found = 0;
+        printf("\n搜索结果:\n");
+        printf("ID  | 英文单词      | 中文释义      | 记忆等级\n");
+        printf("-----------------------------------------------\n");
+        for (int i = 0; i < g_vocab.count; i++) {
+            Word *w = &g_vocab.words[i];
+             
+            char en_lower[MAX_STR];
+            strncpy(en_lower, w->english, MAX_STR - 1);
+            en_lower[MAX_STR - 1] = '\0';
+            for (int j = 0; en_lower[j]; j++) {
+                en_lower[j] = tolower(en_lower[j]);
+            }
+
+            int match_en = strstr(en_lower, key_lower) != NULL;
+            int match_ch = strstr(w->chinese, keyword) != NULL;
+
+            if (match_en || match_ch) {
+                printf("%3d  | %-15s | %-15s | 等级 %d\n", 
+                    w->id, w->english, w->chinese, w->level);
+                found ++;
+            }
+        }
+
+        if (!found) {
+            printf("没有找到与关键词匹配的单词。\n");
+        } else {
+            printf("\n共找到 %d 个单词\n", found);
+        }
+
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
+    
