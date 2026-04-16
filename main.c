@@ -137,6 +137,7 @@ void set_daily_goal();// 设置每日学习目标
 
 void browse_all_words();// 浏览所有单词
 void search_word();// 搜索单词
+void edit_word();// 编辑单词
 
 
 // 主函数
@@ -182,8 +183,9 @@ int main() {
         printf("6.专项复习错词\n");
         printf("7.学习统计可视化\n");
         printf("8.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
-        printf("9.退出系统\n");
-        printf("请输入你的选择(1/2/3/4/5/6/7/8/9): ");
+        printf("9.编辑单词\n");
+        printf("10.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5/6/7/8/9/10): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -253,7 +255,10 @@ int main() {
                         getchar();
                 }
                 break;
-            case 9:// 如果用户选择9，进入退出系统的流程
+            case 9:// 如果用户选择9，进入编辑单词的流程
+                edit_word(); // 调用函数编辑单词
+                break;
+            case 10:// 如果用户选择10，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -267,7 +272,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 9); // 循环直到用户选择退出系统
+    } while (choice != 10); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -1756,3 +1761,86 @@ int main() {
         getchar();
     }
     
+    void edit_word() {// 编辑单词的函数
+        clear_screen();
+        printf("\n=====编辑单词=====\n");
+
+        if (g_vocab.count == 0) {
+            printf("词库为空，无法编辑。\n");
+            printf("\n按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+        
+        char input[MAX_STR];
+        printf("请输入要编辑的单词的 ID 或 英文单词: ");
+        if (!safe_input(input, MAX_STR)) {
+            printf("输入无效，将返回。\n");
+            printf("\n按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        Word *target = NULL;
+
+        int id = atoi(input);
+        if (id > 0) {
+            for (int i = 0; i < g_vocab.count; i++) {
+                if (g_vocab.words[i].id == id) {
+                    target = &g_vocab.words[i];
+                    break;
+                }
+            }
+        }
+
+        if (target == NULL) {
+            for (int i = 0; i < g_vocab.count; i++) {
+                if (strcasecmp_custom(g_vocab.words[i].english, input) == 0) {
+                    target = &g_vocab.words[i];
+                    break;
+                }
+            }
+        }
+
+        if (target == NULL) {
+            printf("未找到该单词！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        printf("\n当前单词信息:\n");
+        printf("ID: %d\n", target->id);
+        printf("英文单词: %s\n", target->english);
+        printf("中文释义: %s\n", target->chinese);
+        printf("记忆等级: %d\n", target->level);
+
+        printf("\n请输入新的英文单词(直接回车不修改): ");
+        char new_english[MAX_STR];
+        if (safe_input(new_english, MAX_STR) && strlen(new_english) > 0) {
+            if (is_duplicate(new_english)) {
+                printf("该英文单词已存在！\n");
+            } else {
+                strncpy(target->english, new_english, MAX_STR - 1);
+                target->english[MAX_STR - 1] = '\0';
+                printf("英文单词已更新！\n");
+            }
+        } else {
+            printf("未修改英文单词！\n");
+        }
+
+        printf("请输入新的中文释义(直接回车不修改): ");
+        char new_chinese[MAX_STR];
+        if (safe_input(new_chinese, MAX_STR) && strlen(new_chinese) > 0) {
+            strncpy(target->chinese, new_chinese, MAX_STR - 1);
+            target->chinese[MAX_STR - 1] = '\0';
+            printf("中文释义已更新！\n");
+        } else {
+            printf("未修改中文释义！\n");
+        }
+
+        save_vocab();
+        printf("\n单词编辑完成！数据已保存。\n");
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
