@@ -449,7 +449,7 @@ int main() {
         new_word.chinese[MAX_STR - 1] = '\0'; // 确保字符串以null结尾，防止溢出
         new_word.level = 0; // 初始化单词记忆等级为0
         new_word.stability = LEVEL_0_INTERVAL; // 初始化记忆稳定性为300秒
-        new_word.last_review = 0; // 初始化上次复习时间为0
+        new_word.last_review = get_current_time(); // 初始化上次复习时间为当前时间
         new_word.next_review = get_current_time(); //表示新单词需要立即复习
         new_word.correct_count = 0; // 初始化正确记忆次数为0
         new_word.wrong_count = 0; // 初始化错误记忆次数为0
