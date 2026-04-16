@@ -138,6 +138,7 @@ void set_daily_goal();// 设置每日学习目标
 void browse_all_words();// 浏览所有单词
 void search_word();// 搜索单词
 void edit_word();// 编辑单词
+void delete_word();// 删除单词
 
 
 // 主函数
@@ -184,8 +185,9 @@ int main() {
         printf("7.学习统计可视化\n");
         printf("8.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
         printf("9.编辑单词\n");
-        printf("10.退出系统\n");
-        printf("请输入你的选择(1/2/3/4/5/6/7/8/9/10): ");
+        printf("10.删除单词\n");
+        printf("11.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5/6/7/8/9/10/11): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -258,7 +260,10 @@ int main() {
             case 9:// 如果用户选择9，进入编辑单词的流程
                 edit_word(); // 调用函数编辑单词
                 break;
-            case 10:// 如果用户选择10，进入退出系统的流程
+            case 10:// 如果用户选择10，进入删除单词的流程
+                delete_word(); // 调用函数删除单词
+                break;
+            case 11:// 如果用户选择11，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -272,7 +277,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 10); // 循环直到用户选择退出系统
+    } while (choice != 11); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -1841,6 +1846,76 @@ int main() {
 
         save_vocab();
         printf("\n单词编辑完成！数据已保存。\n");
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
+
+    void delete_word() {// 删除单词的函数
+        clear_screen();
+        printf("\n=====删除单词=====\n");
+
+        if (g_vocab.count == 0) {
+            printf("词库为空，无法删除。\n");
+            printf("\n按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        char input[256];
+        printf("请输入要删除的单词的 ID 或 英文单词: ");
+        safe_input(input, sizeof(input));
+
+        int index = -1;
+        int id = atoi(input);
+
+        if (id > 0) {
+            for (int i = 0; i < g_vocab.count; i++) {
+                if (g_vocab.words[i].id == id) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+
+        if (index == -1) {
+            for (int i = 0; i < g_vocab.count; i++) {
+                if (strcasecmp(g_vocab.words[i].english, input) == 0) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+
+        if (index == -1) {
+            printf("未找到该单词！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+
+        printf("\n将要删除：\n");
+        printf("ID: %d\n", g_vocab.words[index].id);
+        printf("英文单词: %s\n", g_vocab.words[index].english);
+        printf("中文释义: %s\n", g_vocab.words[index].chinese);
+
+        printf("\n确认删除吗?(y/n)");
+        char c;
+        scanf("%c", &c);
+        if (c != 'y' && c != 'Y') {
+            printf("取消删除。\n");
+            printf("\n按回车键返回主菜单...");
+            getchar();
+            getchar();
+            return;
+        }
+
+        for (int i = index; i < g_vocab.count - 1; i++) {
+            g_vocab.words[i] = g_vocab.words[i + 1];
+        }
+        g_vocab.count--;
+
+        save_vocab();
+        printf("\n单词删除成功！数据已保存。\n");
         printf("\n按回车键返回主菜单...");
         getchar();
     }
