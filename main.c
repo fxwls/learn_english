@@ -884,8 +884,8 @@ int main() {
         time_t now = get_current_time();// 获取当前时间
         double pa = forgetting_probability(wa, now);// 计算遗忘概率
         double pb = forgetting_probability(wb, now);// 计算遗忘概率
-        if (pa < pb) return -1;// R 小= 遗忘概率大
-        if (pa > pb) return 1;
+        if (pa > pb) return -1;
+        if (pa < pb) return 1;
         if (wa->next_review < wb->next_review) return -1;
         if (wa->next_review > wb->next_review) return 1;
         return 0;
