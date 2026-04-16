@@ -366,8 +366,6 @@ int main() {
                 printf("警告：检测到词库文件异常！可能已被篡改或损坏！\n");
                 printf("建议：删除 %s 文件后重新运行程序，或从备份文件恢复数据！\n", g_current_vocab_file);
                 printf("======================================\n");
-                memset(&g_vocab, 0, sizeof(Vocab));// 如果文件异常，清空当前的词库信息，防止使用损坏的数据进行复习
-                g_vocab.count = 0;
                 return;
             }
         }
