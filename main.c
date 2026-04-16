@@ -135,6 +135,8 @@ void set_mock_time();// 设置模拟时间
 
 void set_daily_goal();// 设置每日学习目标
 
+void browse_all_words();// 浏览所有单词
+
 
 // 主函数
 int main() {
@@ -173,12 +175,13 @@ int main() {
         printf("今日新增单词数: %d\n", today_add);// 显示今天新增的单词数量
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
-        printf("3.查看待复习排行榜\n");
-        printf("4.专项复习错词\n");
-        printf("5.学习统计可视化\n");
-        printf("6.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
-        printf("7.退出系统\n");
-        printf("请输入你的选择(1/2/3/4/5/6/7): ");
+        printf("3.查看所以单词\n");
+        printf("4.查看待复习排行榜\n");
+        printf("5.专项复习错词\n");
+        printf("6.学习统计可视化\n");
+        printf("7.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
+        printf("8.退出系统\n");
+        printf("请输入你的选择(1/2/3/4/5/6/7/8): ");
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -193,16 +196,19 @@ int main() {
             case 2:// 如果用户选择2，进入复习单词的流程
                 review_words(); // 调用函数进行单词复习
                 break;
-            case 3:// 如果用户选择3，打开复习排行榜
+            case 3:// 如果用户选择3，进入查看所有单词的流程
+                browse_all_words(); // 调用函数浏览所有单词
+                break;
+            case 4:// 如果用户选择4，打开复习排行榜
                 show_review_rank();
                 break;
-            case 4:// 如果用户选择4，打开专项复习错词
+            case 5:// 如果用户选择5，打开专项复习错词
                 review_mistakes();
                 break;
-            case 5:// 如果用户选择5，进入学习统计可视化的流程
+            case 6:// 如果用户选择6，进入学习统计可视化的流程
                 show_statistics();
                 break;
-            case 6:// 如果用户选择6，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
+            case 7:// 如果用户选择7，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
                 clear_screen();
                 printf("1.新建词库\n");
                 printf("2.切换词库\n");
@@ -242,7 +248,7 @@ int main() {
                         getchar();
                 }
                 break;
-            case 7:// 如果用户选择7，进入退出系统的流程
+            case 8:// 如果用户选择8，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -256,7 +262,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 7); // 循环直到用户选择退出系统
+    } while (choice != 8); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -1531,7 +1537,7 @@ int main() {
         getchar();
     }
 
-    void reset_learning_params() {
+    void reset_learning_params() {// 重置学习参数
         printf("\n=====重置学习参数=====\n");
         printf("当前 gain: %.4f, loss: %.4f\n", g_vocab.gain, g_vocab.loss);
         printf("确认重置为默认值(gain=0.10, loss=0.30)吗?(y/n)");
@@ -1620,7 +1626,7 @@ int main() {
         getchar();
     } 
 
-    void set_daily_goal() {
+    void set_daily_goal() {// 设置每日学习目标的函数
         printf("\n=====设置每日学习目标=====\n");
         printf("当前每日学习目标: %d\n", g_vocab.daily_goal);
         printf("请输入你的每日学习目标: ");
@@ -1638,3 +1644,54 @@ int main() {
         printf("\n按回车键返回主菜单...");
         getchar();
     }
+
+    void browse_all_words() {// 浏览所以单词的函数
+        clear_screen();
+        printf("\n=====浏览所有单词=====\n");
+
+        if (g_vocab.count == 0) {
+            printf("当前词库为空，无法浏览。\n");
+            printf("\n按回车键返回主菜单...");
+            getchar();
+            return;
+        }
+        
+        int page_size =10;
+        int total_pages = (g_vocab.count + page_size - 1) / page_size;
+        int current_page = 1;
+        char choice;
+
+        do {
+            clear_screen();
+            printf("\n=========== 所有单词列表 (第 %d/%d 页) ===========\n", current_page, total_pages);
+            printf("ID  | 英文单词      | 中文释义      | 记忆等级\n");
+            printf("-----------------------------------------------\n");
+
+            int start = (current_page - 1) * page_size;
+            int end = start + page_size;
+            if (end > g_vocab.count) end = g_vocab.count;
+
+            for (int i = start; i < end; i++) {
+                Word *w = &g_vocab.words[i];
+                printf("%3d  | %-15s | %-15s | 等级 %d\n", 
+                    w->id, w->english, w->chinese, w->level);
+            }
+
+            printf("\n共 %d 个单词\n", g_vocab.count);
+            printf("操作： n - 下一页  p - 上一页  q - 返回主菜单\n");
+            choice = getchar();
+            while (getchar() != '\n');
+            choice = tolower(choice);
+
+            if (choice == 'n' && current_page < total_pages) {
+                current_page++;
+            } else if (choice == 'p' && current_page > 1) {
+                current_page--;
+            } else if (choice == 'q') {
+                break;
+            }
+    } while(1);
+
+    printf("\n按回车键返回主菜单...");
+    getchar();
+}
