@@ -23,15 +23,13 @@
 #define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
 //加密
 #define ENCRYPT_KEY 0x7B// 加密密钥
-//控制台
-#define COLOR_DEFAULT 7// 默认颜色
-#define COLOR_RED 12// 红色
-#define COLOR_GREEN 10// 绿色
-#define COLOR_BLUE 9// 蓝色
-#define COLOR_YELLOW 14// 黄色
-#define COLOR_CYAN 11// 青色
-#define COLOR_PURPLE 13// 紫色
-#define COLOR_GRAY 8// 灰色
+// 控制台颜色（美化版）
+#define COLOR_DEFAULT  7    // 白色
+#define COLOR_MENU     7    // 菜单白色
+#define COLOR_TITLE    11   // 标题蓝色
+#define COLOR_SUCCESS  10   // 成功绿色
+#define COLOR_WARN     14   // 提示黄色
+#define COLOR_ERROR    12   // 错误红色
 
 
 //结构体定义
@@ -181,26 +179,25 @@ int main() {
                 today_add++;
             }
         }
-        set_color(COLOR_GREEN);
-        printf("\n============艾宾浩斯单词记忆系统============\n");
+        set_color(COLOR_TITLE);
+        printf("\n===================================================\n");
+        printf("               艾宾浩斯单词记忆系统                 \n");
+        printf("===================================================\n");
         set_color(COLOR_DEFAULT);
-        printf("当前词库单词数: %d | 待复习单词数: %d\n", g_vocab.count, get_need_review_count()); // 显示当前词库中的单词数量和需要复习的单词数量
-        printf("今日新增单词数: %d\n", today_add);// 显示今天新增的单词数量
-        set_color(COLOR_CYAN);
-        printf("1.录入新单词\n");
-        printf("2.复习单词\n");
-        printf("3.查看所以单词\n");
-        printf("4.搜索单词\n");
-        printf("5.查看待复习排行榜\n");
-        printf("6.专项复习错词\n");
-        printf("7.学习统计可视化\n");
-        printf("8.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
-        printf("9.编辑单词\n");
-        printf("10.删除单词\n");
-        printf("11.退出系统\n");
+
+        printf("  当前词库：%-18s  总单词：%d\n", g_current_vocab_file, g_vocab.count);
+        printf("  待复习：%-18d  今日新增：%d\n", get_need_review_count(), today_add);
+        printf("---------------------------------------------------\n");
+
+        set_color(COLOR_MENU);
+        printf("  [1] 录入单词    [2] 开始复习    [3] 浏览所有\n");
+        printf("  [4] 搜索单词    [5] 复习排行    [6] 错词本\n");
+        printf("  [7] 学习统计    [8] 词库管理    [9] 编辑单词\n");
+        printf("  [10] 删除单词   [11] 设置       [12] 退出系统\n");
         set_color(COLOR_DEFAULT);
-        set_color(COLOR_YELLOW);
-        printf("请输入你的选择(1/2/3/4/5/6/7/8/9/10/11): ");
+
+        set_color(COLOR_WARN);
+        printf("\n  请选择功能(1-11)：");
         set_color(COLOR_DEFAULT);
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
@@ -231,15 +228,16 @@ int main() {
             case 7:// 如果用户选择7，进入学习统计可视化的流程
                 show_statistics();
                 break;
-            case 8:// 如果用户选择8，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
+            case 8:// 如果用户选择8，进入词库管理的流程
                 clear_screen();
-                printf("1.新建词库\n");
-                printf("2.切换词库\n");
-                printf("3.从备份恢复词库\n");
-                printf("4.重置学习参数为默认值\n");
-                printf("5.时间模拟测试\n");
-                printf("6.设置每日目标\n");
-                printf("请输入你的选择(1/2/3/4/5/6): ");
+                set_color(COLOR_TITLE);
+                printf("==================== 词库管理 ====================\n");
+                set_color(COLOR_DEFAULT);
+                printf("  [1] 新建词库    [2] 切换词库    [3] 恢复备份\n");
+                set_color(COLOR_WARN);
+                printf("\n  请选择(1-3)：");
+                set_color(COLOR_DEFAULT);
+
                 int sub_choice;
                 if (scanf("%d", &sub_choice) != 1) {// 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
                     sub_choice = 0;
@@ -256,15 +254,6 @@ int main() {
                     case 3:
                         restore_vocab();
                         break;
-                    case 4:
-                        reset_learning_params();
-                        break;
-                    case 5:
-                        set_mock_time();
-                        break;
-                    case 6:
-                        set_daily_goal();
-                        break;
                     default:
                         printf("无效的选择，请重新输入！\n");
                         printf("按回车键继续...");
@@ -277,7 +266,38 @@ int main() {
             case 10:// 如果用户选择10，进入删除单词的流程
                 delete_word(); // 调用函数删除单词
                 break;
-            case 11:// 如果用户选择11，进入退出系统的流程
+            case 11:// 如果用户选择11，进入设置的流程
+                clear_screen();
+                set_color(COLOR_TITLE);
+                printf("==================== 设置 ====================\n");
+                set_color(COLOR_DEFAULT);
+                printf("  [1] 重置参数    [2] 时间模拟    [3] 每日目标\n");
+                set_color(COLOR_WARN);
+                printf("\n  请选择(1-3)：");
+                set_color(COLOR_DEFAULT);
+                int sub_choice2;
+                if (scanf("%d", &sub_choice2) != 1) {// 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
+                    sub_choice = 0;
+                    while (getchar() != '\n');
+                }
+                getchar();// 清除scanf留下的换行符
+                switch (sub_choice2) {
+                    case 1:
+                        reset_learning_params();
+                        break;
+                    case 2:
+                        set_mock_time();
+                        break;
+                    case 3:
+                        set_daily_goal();
+                        break;
+                    default:
+                        printf("无效的选择，请重新输入！\n");
+                        printf("按回车键继续...");
+                        getchar();
+                }
+                break;
+            case 12:// 如果用户选择11，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -291,7 +311,7 @@ int main() {
                 printf("按回车键继续...");
                 getchar(); // 等待用户按下回车键继续操作
         }
-    } while (choice != 11); // 循环直到用户选择退出系统
+    } while (choice != 12); // 循环直到用户选择退出系统
 
     return 0;
 }
@@ -1937,3 +1957,4 @@ int main() {
         printf("\n按回车键返回主菜单...");
         getchar();
     }
+
