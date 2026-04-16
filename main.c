@@ -271,9 +271,10 @@ int main() {
         if (fgets(buf, size, stdin) == NULL)// 使用fgets函数读取输入，如果输入失败，返回NULL
             return 0; // 如果输入失败，返回0
         trim_newline(buf); // 去除输入字符串末尾的换行符
-       if (strlen(buf) == 0) {
+        trim(buf);// 去除输入字符串两端的空格
+        if (strlen(buf) == 0) {
             return 0; // 如果输入的字符串长度为0，返回0表示输入无效
-       }
+        }
         return 1; // 输入成功，返回1
     }
 
