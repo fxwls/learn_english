@@ -23,8 +23,15 @@
 #define MAX_LEVEL 7// 最大记忆等级为7，表示单词已经非常熟悉了
 //加密
 #define ENCRYPT_KEY 0x7B// 加密密钥
-
-
+//控制台
+#define COLOR_DEFAULT 7// 默认颜色
+#define COLOR_RED 12// 红色
+#define COLOR_GREEN 10// 绿色
+#define COLOR_BLUE 9// 蓝色
+#define COLOR_YELLOW 14// 黄色
+#define COLOR_CYAN 11// 青色
+#define COLOR_PURPLE 13// 紫色
+#define COLOR_GRAY 8// 灰色
 
 
 //结构体定义
@@ -78,6 +85,7 @@ char g_current_backup_vocab_file[300] = "vocab_backup.dat";// 备份词库文件
 
 
 // 函数声明
+void set_color(int color);// 设置字体颜色的函数
 void clear_screen(); // 清屏函数，清除控制台上的内容
 void trim_newline(char *s); // 去除字符串末尾的换行符函数
 int safe_input(char *buf, int size); // 安全输入函数，限制输入长度
@@ -173,9 +181,12 @@ int main() {
                 today_add++;
             }
         }
+        set_color(COLOR_GREEN);
         printf("\n============艾宾浩斯单词记忆系统============\n");
+        set_color(COLOR_DEFAULT);
         printf("当前词库单词数: %d | 待复习单词数: %d\n", g_vocab.count, get_need_review_count()); // 显示当前词库中的单词数量和需要复习的单词数量
         printf("今日新增单词数: %d\n", today_add);// 显示今天新增的单词数量
+        set_color(COLOR_CYAN);
         printf("1.录入新单词\n");
         printf("2.复习单词\n");
         printf("3.查看所以单词\n");
@@ -187,7 +198,10 @@ int main() {
         printf("9.编辑单词\n");
         printf("10.删除单词\n");
         printf("11.退出系统\n");
+        set_color(COLOR_DEFAULT);
+        set_color(COLOR_YELLOW);
         printf("请输入你的选择(1/2/3/4/5/6/7/8/9/10/11): ");
+        set_color(COLOR_DEFAULT);
 
         if (scanf("%d", &choice) != 1) { // 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
             choice = 0; // 将choice设置为0，表示无效的选择 
@@ -283,6 +297,10 @@ int main() {
 }
 
 // 函数定义
+    void set_color(int color) {// 设置字体颜色的函数
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);    
+    }
+
     void clear_screen() {// 清屏函数，根据操作系统不同使用不同的命令清屏
         #ifdef _WIN32
             system("cls"); // Windows系统使用cls命令清屏
