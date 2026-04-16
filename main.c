@@ -1128,6 +1128,9 @@ int main() {
         // 初始化词库信息
         memset(&g_vocab, 0, sizeof(Vocab)); // 将全局变量g_vocab的内存空间清零，初始化词库信息
         g_vocab.count = 0; // 初始化单词数量为0
+        g_vocab.gain = 0.10f;
+        g_vocab.loss = 0.30f;
+        g_vocab.total_review = 0;
 
         printf("新词库 %s 创建成功！\n", g_current_vocab_file); // 提示用户新词库创建成功，并显示新词库的文件名
         save_vocab(); // 保存空文件
