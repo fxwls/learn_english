@@ -742,13 +742,19 @@ int main() {
 
         // 保存复习后的状态
         save_vocab();
-        today = get_today();
-        if (g_vocab.last_add_date != today) {
-            if (g_vocab.last_study_date == today - 1)
-                g_vocab.continuous_days++;// 连续复习天数加一
-            else
-                g_vocab.continuous_days = 1;// 如果是新的一天，连续复习天数重新计算
-            g_vocab.last_study_date = today;// 更新最后复习日期
+        if (reviewed > 0) {
+            today = get_today();
+            if (g_vocab.last_study_date == 0) {
+                g_vocab.continuous_days = 1;
+            } else if (g_vocab.last_study_date == today - 1) {
+                g_vocab.continuous_days++;
+            } else if (g_vocab.last_study_date < today - 1) {
+                g_vocab.continuous_days = 1;
+            }
+
+            if (g_vocab.last_study_date != today) {
+                g_vocab.last_study_date = today;
+            }
         }
         // 更新当天统计并写入日志
         if (reviewed > 0) {
