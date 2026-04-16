@@ -57,6 +57,9 @@ typedef struct {// 定义一个结构体类型Vocab，用于存储整个词库�
     float gain;// 答对时稳定性增长系数，初始值为0.10
     float loss;// 答错时稳定性减少系数，初始值为0.30
     int total_review;// 总复习次数
+    int continuous_days;// 连续复习天数
+    int last_study_date;// 最近复习的日期
+    int daily_goal;// 每天的目标单词数
 } Vocab;
 
 
@@ -130,6 +133,8 @@ void reset_learning_params();// 重置学习参数
 time_t get_current_time(void);// 获取模拟时间
 void set_mock_time();// 设置模拟时间
 
+void set_daily_goal();// 设置每日学习目标
+
 
 // 主函数
 int main() {
@@ -171,7 +176,7 @@ int main() {
         printf("3.查看待复习排行榜\n");
         printf("4.专项复习错词\n");
         printf("5.学习统计可视化\n");
-        printf("6.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间\n");
+        printf("6.新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日学习目标\n");
         printf("7.退出系统\n");
         printf("请输入你的选择(1/2/3/4/5/6/7): ");
 
@@ -197,14 +202,15 @@ int main() {
             case 5:// 如果用户选择5，进入学习统计可视化的流程
                 show_statistics();
                 break;
-            case 6:// 如果用户选择5，进入新建/切换词库的流程
+            case 6:// 如果用户选择6，进入新建/切换词库/从备份恢复词库/重置学习参数/设置模拟时间/设置每日目标的流程
                 clear_screen();
                 printf("1.新建词库\n");
                 printf("2.切换词库\n");
                 printf("3.从备份恢复词库\n");
                 printf("4.重置学习参数为默认值\n");
                 printf("5.时间模拟测试\n");
-                printf("请输入你的选择(1/2/3/4/5): ");
+                printf("6.设置每日目标\n");
+                printf("请输入你的选择(1/2/3/4/5/6): ");
                 int sub_choice;
                 if (scanf("%d", &sub_choice) != 1) {// 读取用户输入的选择，如果输入不是整数，提示用户输入无效并继续循环
                     sub_choice = 0;
@@ -227,13 +233,16 @@ int main() {
                     case 5:
                         set_mock_time();
                         break;
+                    case 6:
+                        set_daily_goal();
+                        break;
                     default:
                         printf("无效的选择，请重新输入！\n");
                         printf("按回车键继续...");
                         getchar();
                 }
                 break;
-            case 7:// 如果用户选择6，进入退出系统的流程
+            case 7:// 如果用户选择7，进入退出系统的流程
                 printf("正在保存数据...\n");
                 save_vocab(); // 调用函数将当前的单词信息保存到文件中
                 backup_vocab(); // 调用函数将当前的单词信息加密后保存到备份文件中，以防止数据丢失或被未授权访问
@@ -733,6 +742,14 @@ int main() {
 
         // 保存复习后的状态
         save_vocab();
+        today = get_today();
+        if (g_vocab.last_add_date != today) {
+            if (g_vocab.last_study_date == today - 1)
+                g_vocab.continuous_days++;// 连续复习天数加一
+            else
+                g_vocab.continuous_days = 1;// 如果是新的一天，连续复习天数重新计算
+            g_vocab.last_study_date = today;// 更新最后复习日期
+        }
         // 更新当天统计并写入日志
         if (reviewed > 0) {
             DailyStat *today_stat = get_today_daily_stat();
@@ -1397,9 +1414,11 @@ int main() {
         fclose(log); // 关闭日志文件
     }
 
-    void show_statistics() {// 显示复习统计的函数，统计最近7天的复习数量，并以图表形式显示每天的复习单词数和正确率趋势，同时提供文字汇总每天的具体数字
+    void show_statistics() {// 显示复习统计
         clear_screen();
         printf("\n=======复习统计=======\n");
+        printf("连续学习天数：%d\n", g_vocab.continuous_days);
+        printf("每日目标：%d\n", g_vocab.daily_goal);
         // 先展示学习率
         printf("累计复习总次数：%d\n", g_vocab.total_review);
         double current_lr = 0.05 / (1.0 + g_vocab.total_review / 500.0);
@@ -1594,3 +1613,22 @@ int main() {
         printf("\n按回车键返回主菜单...");
         getchar();
     } 
+
+    void set_daily_goal() {
+        printf("\n=====设置每日学习目标=====\n");
+        printf("当前每日学习目标: %d\n", g_vocab.daily_goal);
+        printf("请输入你的每日学习目标: ");
+        int goal;
+        if (scanf("%d", &goal) != 1) {
+            while(getchar() != '\n');
+            printf("无效的目标，将返回。\n");
+            return;
+        } 
+        getchar();
+        if (goal < 1) goal = 10;
+        g_vocab.daily_goal = goal;
+        save_vocab();
+        printf("每日学习目标已设置为: %d\n", g_vocab.daily_goal);
+        printf("\n按回车键返回主菜单...");
+        getchar();
+    }
