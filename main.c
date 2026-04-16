@@ -1530,7 +1530,8 @@ int main() {
 
     void set_mock_time(void) {// 设置模拟时间
         printf("\n=====设置模拟时间=====\n");
-        printf("当前时间: %s\n", ctime(&(time_t){get_current_time()}));
+        time_t now_t = get_current_time();
+        printf("当前时间: %s\n", ctime(&now_t));
         printf("1. 增加指定小时\n");
         printf("2. 增加指定分钟\n");
         printf("3. 增加指定秒数\n");
@@ -1587,7 +1588,8 @@ int main() {
                 printf("无效的选择，将返回。\n");
                 return;
         }
-        printf("新模拟时间: %s\n", ctime(&(time_t){get_current_time()}));
+        time_t new_time = get_current_time();
+        printf("模拟时间已更新为: %s\n", ctime(&new_time));
         printf("\n按回车键返回主菜单...");
         getchar();
     } 
