@@ -132,6 +132,7 @@ void restore_vocab(); // 从备份恢复词库
 DailyStat* get_today_daily_stat();// 获取今天的日志
 void write_daily_log();// 写入日志
 void show_statistics();// 显示复习统计
+time_t date_to_time_t(int date);// 将日期转换为时间戳
 
 void reset_learning_params();// 重置学习参数
 
@@ -517,7 +518,7 @@ int main() {
         new_word.chinese[MAX_STR - 1] = '\0'; // 确保字符串以null结尾，防止溢出
         new_word.level = 0; // 初始化单词记忆等级为0
         new_word.stability = LEVEL_0_INTERVAL; // 初始化记忆稳定性为300秒
-        new_word.last_review = get_current_time(); // 初始化上次复习时间为当前时间
+        new_word.last_review = 0; // 初始化上次复习时间为0
         new_word.next_review = get_current_time(); //表示新单词需要立即复习
         new_word.correct_count = 0; // 初始化正确记忆次数为0
         new_word.wrong_count = 0; // 初始化错误记忆次数为0
@@ -802,18 +803,20 @@ int main() {
         // 保存复习后的状态
         save_vocab();
         if (reviewed > 0) {
-            today = get_today();
             if (g_vocab.last_study_date == 0) {
                 g_vocab.continuous_days = 1;
-            } else if (g_vocab.last_study_date == today - 1) {
-                g_vocab.continuous_days++;
-            } else if (g_vocab.last_study_date < today - 1) {
-                g_vocab.continuous_days = 1;
+            } else {
+                time_t last_t = date_to_time_t(g_vocab.last_study_date);
+                time_t now_t = date_to_time_t(today);
+                double diff_sec = difftime(now_t, last_t);
+                int diff_days = (int)(diff_sec / 86400);
+                if  (diff_days == 1) {
+                    g_vocab.continuous_days++;
+                } else if (diff_days > 1) {
+                    g_vocab.continuous_days = 1;
+                }
             }
-
-            if (g_vocab.last_study_date != today) {
-                g_vocab.last_study_date = today;
-            }
+            g_vocab.last_study_date = today;
         }
         // 更新当天统计并写入日志
         if (reviewed > 0) {
@@ -952,11 +955,13 @@ int main() {
         double elapsed = difftime(now, w->last_review);// 计算从上次复习到现在的时间差，单位为秒
         if (elapsed <= 0) return 1.0;// 如果时间差小于等于0，肯定遗忘
 
-        // 计算遗忘概率 R = exp(-elapsed / stability)
-        double R = exp(-elapsed / w->stability);// 计算遗忘概率
-        if (R < 0) R = 0;// 如果遗忘概率小于0，设置为0
-        if (R > 1) R = 1;// 如果遗忘概率大于1，设置为1
-        return R;
+        // 计算回忆概率 R = exp(-elapsed / stability)
+        double recall = exp(-elapsed / w->stability);
+        double forgetting = 1.0 - recall;// 计算遗忘概率 = 1 - 回忆概率
+
+        if (forgetting < 0) forgetting = 0;// 如果遗忘概率小于0，设置为0
+        if (forgetting > 1) forgetting = 1;// 如果遗忘概率大于1，设置为1
+        return forgetting;
     }
     int compare_word_ptr_by_forgetting(const void *a, const void *b) {//比较函数
         Word *wa = *(Word **)a;
@@ -964,8 +969,10 @@ int main() {
         time_t now = get_current_time();// 获取当前时间
         double pa = forgetting_probability(wa, now);// 计算遗忘概率
         double pb = forgetting_probability(wb, now);// 计算遗忘概率
+        // 根据遗忘概率和下次复习时间进行排序
         if (pa > pb) return -1;
         if (pa < pb) return 1;
+        // 如果遗忘概率相同，根据下次复习时间进行排序
         if (wa->next_review < wb->next_review) return -1;
         if (wa->next_review > wb->next_review) return 1;
         return 0;
@@ -1958,3 +1965,11 @@ int main() {
         getchar();
     }
 
+    time_t date_to_time_t(int date) {// 将日期转换为时间戳
+        struct tm tm = {0};
+        tm.tm_year = date / 10000 - 1900;
+        tm.tm_mon = (date % 10000) / 100 - 1;
+        tm.tm_mday = date % 100;
+        tm.tm_hour = 12;// 设置为中午12点
+        return mktime(&tm);
+    }
