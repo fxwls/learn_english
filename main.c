@@ -806,13 +806,12 @@ int main() {
             if (g_vocab.last_study_date == 0) {
                 g_vocab.continuous_days = 1;
             } else {
-                time_t last_t = date_to_time_t(g_vocab.last_study_date);
-                time_t now_t = date_to_time_t(today);
-                double diff_sec = difftime(now_t, last_t);
-                int diff_days = (int)(diff_sec / 86400);
-                if  (diff_days == 1) {
+                int last_day = g_vocab.last_study_date;
+                int diff_diff  = today - last_day;
+
+                if  (diff_diff == 1) {
                     g_vocab.continuous_days++;
-                } else if (diff_days > 1) {
+                } else if (diff_diff > 1) {
                     g_vocab.continuous_days = 1;
                 }
             }
