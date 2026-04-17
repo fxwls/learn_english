@@ -132,7 +132,7 @@ void restore_vocab(); // 从备份恢复词库
 DailyStat* get_today_daily_stat();// 获取今天的日志
 void write_daily_log();// 写入日志
 void show_statistics();// 显示复习统计
-time_t date_to_time_t(int date);// 将日期转换为时间戳
+time_t date_to_time_t(int date);// 日期相邻判断时间戳转换
 
 void reset_learning_params();// 重置学习参数
 
@@ -806,12 +806,14 @@ int main() {
             if (g_vocab.last_study_date == 0) {
                 g_vocab.continuous_days = 1;
             } else {
-                int last_day = g_vocab.last_study_date;
-                int diff_diff  = today - last_day;
-
-                if  (diff_diff == 1) {
+                time_t last_t = date_to_time_t(g_vocab.last_study_date);
+                time_t now_t = date_to_time_t(today);
+                double diff_sec = difftime(now_t, last_t);
+                int diff_days = diff_sec / (60 * 60 * 24);
+                
+                if (diff_days == 1) {
                     g_vocab.continuous_days++;
-                } else if (diff_diff > 1) {
+                } else if (diff_days >=2) {
                     g_vocab.continuous_days = 1;
                 }
             }
@@ -1847,7 +1849,7 @@ int main() {
                 if (strcasecmp_custom(g_vocab.words[i].english, input) == 0) {
                     target = &g_vocab.words[i];
                     break;
-                }
+                } 
             }
         }
 
@@ -1867,11 +1869,12 @@ int main() {
         printf("\n请输入新的英文单词(直接回车不修改): ");
         char new_english[MAX_STR];
         if (safe_input(new_english, MAX_STR) && strlen(new_english) > 0) {
-            if (is_duplicate(new_english)) {
+            if (strcasecmp_custom(new_english, target->english) == 0) {
+                printf("未修改英文单词！\n");
+            } else if (is_duplicate(new_english)) {
                 printf("该英文单词已存在！\n");
             } else {
-                strncpy(target->english, new_english, MAX_STR - 1);
-                target->english[MAX_STR - 1] = '\0';
+                strcpy(target->english, new_english);
                 printf("英文单词已更新！\n");
             }
         } else {
@@ -1881,8 +1884,7 @@ int main() {
         printf("请输入新的中文释义(直接回车不修改): ");
         char new_chinese[MAX_STR];
         if (safe_input(new_chinese, MAX_STR) && strlen(new_chinese) > 0) {
-            strncpy(target->chinese, new_chinese, MAX_STR - 1);
-            target->chinese[MAX_STR - 1] = '\0';
+            strcpy(target->chinese, new_chinese);
             printf("中文释义已更新！\n");
         } else {
             printf("未修改中文释义！\n");
@@ -1923,7 +1925,7 @@ int main() {
 
         if (index == -1) {
             for (int i = 0; i < g_vocab.count; i++) {
-                if (strcasecmp(g_vocab.words[i].english, input) == 0) {
+                if (strcasecmp_custom(g_vocab.words[i].english, input) == 0) {
                     index = i;
                     break;
                 }
@@ -1964,7 +1966,7 @@ int main() {
         getchar();
     }
 
-    time_t date_to_time_t(int date) {// 将日期转换为时间戳
+    time_t date_to_time_t(int date) {// 日期相邻判断时间戳转换
         struct tm tm = {0};
         tm.tm_year = date / 10000 - 1900;
         tm.tm_mon = (date % 10000) / 100 - 1;
@@ -1972,3 +1974,4 @@ int main() {
         tm.tm_hour = 12;// 设置为中午12点
         return mktime(&tm);
     }
+
