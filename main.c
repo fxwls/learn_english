@@ -1063,10 +1063,24 @@ int main() {
             }
         }
 
-
-        
-        // 保存更改
-        save_vocab();
+        // 更新连续学习天数
+        int today = get_today();
+        if (reviewed > 0) {
+            if (g_vocab.last_study_date == 0) {
+                g_vocab.continuous_days = 1;
+            } else {
+                time_t last_t = date_to_time_t(g_vocab.last_study_date);
+                time_t now_t = date_to_time_t(today);
+                double diff_sec = difftime(now_t, last_t);
+                int diff_days = (int)(diff_sec / (60.0 * 60 * 24) + 0.5);
+                if (diff_days == 1)
+                    g_vocab.continuous_days++;
+                else if (diff_days >= 2)
+                    g_vocab.continuous_days = 1;
+            }
+            g_vocab.last_study_date = today;
+        }
+    
         // 更新当天统计并写入日志
         if (reviewed > 0) {
             DailyStat *today_stat = get_today_daily_stat();
