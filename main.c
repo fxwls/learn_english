@@ -8,6 +8,7 @@
 #include<sys/stat.h>
 #include<errno.h>
 
+
 // 常量定义
 #define MAX_WORD 2000// 最多存储2000个单词
 #define MAX_STR 1000// 每个字符串（英文单词和中文释义）的最大长度
@@ -25,7 +26,7 @@
 #define ENCRYPT_KEY 0x7B// 加密密钥
 // 控制台颜色（美化版）
 #define COLOR_DEFAULT  7    // 白色
-#define COLOR_MENU     7    // 菜单白色
+#define COLOR_MENU_TEXT 7    // 菜单白色
 #define COLOR_TITLE    11   // 标题蓝色
 #define COLOR_SUCCESS  10   // 成功绿色
 #define COLOR_WARN     14   // 提示黄色
@@ -190,7 +191,7 @@ int main() {
         printf("  待复习：%-18d  今日新增：%d\n", get_need_review_count(), today_add);
         printf("---------------------------------------------------\n");
 
-        set_color(COLOR_MENU);
+        set_color(COLOR_MENU_TEXT);
         printf("  [1] 录入单词    [2] 开始复习    [3] 浏览所有\n");
         printf("  [4] 搜索单词    [5] 复习排行    [6] 错词本\n");
         printf("  [7] 学习统计    [8] 词库管理    [9] 编辑单词\n");
