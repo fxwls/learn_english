@@ -790,7 +790,7 @@ int main() {
                 printf("确认退出复习吗?(y/n)");
                 char confirm[10];
                 if (safe_input(confirm, sizeof(confirm)) && tolower(confirm[0]) == 'y') {
-                        break;
+                    break;
                 }
             } else if (strlen(line) > 0) {
                 printf("无效的输入，请按回车键继续复习...\n");
@@ -800,8 +800,7 @@ int main() {
 
         }
 
-        // 保存复习后的状态
-        save_vocab();
+        // 更新连续复习天数
         today = get_today();
         if (reviewed > 0) {
             if (g_vocab.last_study_date == 0) {
@@ -810,7 +809,7 @@ int main() {
                 time_t last_t = date_to_time_t(g_vocab.last_study_date);
                 time_t now_t = date_to_time_t(today);
                 double diff_sec = difftime(now_t, last_t);
-                int diff_days = (int)(diff_sec / (60 * 60 * 24));
+                int diff_days = (int)(diff_sec / (60 * 60 * 24) + 0.5); // 四舍五入计算天数差
 
                 if (diff_days == 1) {
                     g_vocab.continuous_days++;
