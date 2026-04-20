@@ -809,8 +809,8 @@ int main() {
                 time_t last_t = date_to_time_t(g_vocab.last_study_date);
                 time_t now_t = date_to_time_t(today);
                 double diff_sec = difftime(now_t, last_t);
-                int diff_days = diff_sec / (60 * 60 * 24);
-                
+                int diff_days = (int)(diff_sec / (60 * 60 * 24));
+
                 if (diff_days == 1) {
                     g_vocab.continuous_days++;
                 } else if (diff_days >=2) {
@@ -1028,9 +1028,10 @@ int main() {
             if (is_correct == 1) {
                 correct++;
             }
-             // 正常更新记忆等级
-                update_word_level(word, is_correct);
+            // 正常更新记忆等级
+            update_word_level(word, is_correct);
             reviewed++;
+            g_vocab.total_review++;// 总复习次数加一
 
             // 按回车键继续复习
             printf("按回车键继续复习(输入q退出)...\n");
@@ -1052,6 +1053,8 @@ int main() {
                 while ((ch = getchar()) != '\n' && ch != EOF);
             }
         }
+
+
         
         // 保存更改
         save_vocab();
@@ -1222,6 +1225,10 @@ int main() {
         g_vocab.gain = 0.10f;
         g_vocab.loss = 0.30f;
         g_vocab.total_review = 0;
+        g_vocab.daily_goal = 10;
+        g_vocab.continuous_days = 0;
+        g_vocab.last_study_date = 0;
+        g_vocab.daily_stats_count = 0;
 
         printf("新词库 %s 创建成功！\n", g_current_vocab_file); // 提示用户新词库创建成功，并显示新词库的文件名
         save_vocab(); // 保存空文件
@@ -1959,6 +1966,10 @@ int main() {
             g_vocab.words[i] = g_vocab.words[i + 1];
         }
         g_vocab.count--;
+
+        for (int i = 0; i < g_vocab.count; i++) {
+            g_vocab.words[i].id = i + 1;
+        }
 
         save_vocab();
         printf("\n单词删除成功！数据已保存。\n");
