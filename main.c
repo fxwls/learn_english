@@ -914,14 +914,23 @@ int main() {
                 }
 
                 int total = w->correct_count + w->wrong_count;// 计算总的测试次数
-                double correct_rate = (total == 0) ? 0.5 : (double)w->correct_count / total;// 计算正确率
-                printf("%-4d | %-10s | %-10s | %-10s | 等级：%d | 正确率:%.0f%%\n", 
-                    i+1,
-                    w->english, 
-                    w->chinese, 
-                    time_str,
-                    w->level, 
-                    correct_rate * 100);
+                double correct_rate = (total == 0) ? 0.5 : (double)w->correct_count / total;// 计算正确率   
+                if (total == 0) {
+                    printf("%-4d | %-10s | %-10s | %-10s | 等级：%d | 正确率:未知\n", 
+                        i+1,
+                        w->english, 
+                        w->chinese, 
+                        time_str,
+                        w->level);
+                } else {
+                    printf("%-4d | %-10s | %-10s | %-10s | 等级：%d | 正确率:%.0f%%\n", 
+                        i+1,
+                        w->english, 
+                        w->chinese, 
+                        time_str,
+                        w->level, 
+                        correct_rate * 100);
+                }
             }
                 printf("------------------------------------------------\n");
                 printf("共 %d 个待复习单词\n", need_count);
