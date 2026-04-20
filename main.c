@@ -802,6 +802,7 @@ int main() {
 
         // 保存复习后的状态
         save_vocab();
+        today = get_today();
         if (reviewed > 0) {
             if (g_vocab.last_study_date == 0) {
                 g_vocab.continuous_days = 1;
