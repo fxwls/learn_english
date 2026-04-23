@@ -1151,12 +1151,12 @@ int main() {
             sum += (int)vocab->words[i].next_review;
             sum += vocab->words[i].correct_count;
             sum += vocab->words[i].wrong_count;
-        }
-        for (int j = 0; vocab->words[j].english[j] != '\0'; j++) {
-            sum += vocab->words[j].english[j];
-        }
-        for (int k = 0; vocab->words[k].chinese[k] != '\0'; k++) {
-            sum += vocab->words[k].chinese[k];
+            for (const char *p = vocab->words[i].english; *p; p++) {
+                sum += (unsigned char)(*p);
+            }
+            for (const char *p = vocab->words[i].chinese; *p; p++) {
+                sum += (unsigned char)(*p);
+            }
         }
         for (int i = 0; i < vocab->daily_stats_count && i < 30; i++) {
             sum += vocab->daily_stats[i].date;
