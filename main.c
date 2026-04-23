@@ -756,6 +756,7 @@ int main() {
 
         // 复习单词
         int reviewed = 0, correct = 0;
+        int today_updated = 0; // 标记当天是否已经更新过连续复习天数，避免重复更新
         for (int i = 0; i < to_review_count; i++) {
             Word *word = to_review[i];
             clear_screen();
@@ -779,7 +780,31 @@ int main() {
         
             // 更新单词状态
             update_word_level(word, is_correct);
-            save_vocab();  // 实时保存进度
+
+            //在第一个单词复习后立即更新连续复习天数，确保当天的复习进度被记录
+            if (!today_updated && reviewed == 1) {
+                int current_day = get_today();
+                if (g_vocab.last_study_date == 0) {
+                    g_vocab.continuous_days = 1;
+                } else {
+                    time_t last_t = date_to_time_t(g_vocab.last_study_date);
+                    time_t now_t = date_to_time_t(current_day);
+                    double diff_sec = difftime(now_t, last_t);
+                    int diff_days = (int)(diff_sec / (60 * 60 * 24) + 0.5); // 四舍五入计算天数差
+
+                    if (diff_days == 1) {
+                        g_vocab.continuous_days++;
+                    } else if (diff_days >=2) {
+                        g_vocab.continuous_days = 1;
+                    }
+                }
+                g_vocab.last_study_date = current_day;
+                today_updated = 1;
+                save_vocab();
+            }
+            if (reviewed % 5 == 0) {
+                save_vocab(); // 每复习5个单词保存一次数据，确保复习进度不会丢失
+            }
 
             printf("\n按回车键继续复习（输入q退出复习）...");
             char line[16];
@@ -799,28 +824,8 @@ int main() {
                 int ch;
                 while ((ch = getchar()) != '\n' && ch != EOF);
             }
-
         }
 
-        // 更新连续复习天数
-        today = get_today();
-        if (reviewed > 0) {
-            if (g_vocab.last_study_date == 0) {
-                g_vocab.continuous_days = 1;
-            } else {
-                time_t last_t = date_to_time_t(g_vocab.last_study_date);
-                time_t now_t = date_to_time_t(today);
-                double diff_sec = difftime(now_t, last_t);
-                int diff_days = (int)(diff_sec / (60 * 60 * 24) + 0.5); // 四舍五入计算天数差
-
-                if (diff_days == 1) {
-                    g_vocab.continuous_days++;
-                } else if (diff_days >=2) {
-                    g_vocab.continuous_days = 1;
-                }
-            }
-            g_vocab.last_study_date = today;
-        }
         // 更新当天统计并写入日志
         if (reviewed > 0) {
             DailyStat *today_stat = get_today_daily_stat();
