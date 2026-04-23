@@ -1,3 +1,4 @@
+// word_manager.c
 #include "word_manager.h"
 #include "vocab_core.h"
 #include "ui_utils.h"

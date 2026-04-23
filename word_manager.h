@@ -1,3 +1,4 @@
+// word_manager.h
 #ifndef WORD_MANAGER_H
 #define WORD_MANAGER_H
 

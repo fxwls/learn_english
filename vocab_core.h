@@ -1,3 +1,4 @@
+// vocab_core.h
 #ifndef VOCAB_CORE_H
 #define VOCAB_CORE_H
 
