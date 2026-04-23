@@ -8,9 +8,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <locale.h>
+
 
 int main() {
-    SetConsoleOutputCP(CP_UTF8);
+    #ifdef _WIN32
+    // === 强制 UTF-8 代码块开始 ===
+    system("chcp 65001 > nul");   // 切换控制台代码页为 UTF-8
+    setlocale(LC_ALL, ".UTF-8");  // 设置区域为 UTF-8
+    // === 强制 UTF-8 代码块结束 ===
+    #endif
     load_vocab();
     printf("加载完成，按回车继续...");
     getchar();

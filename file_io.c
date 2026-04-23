@@ -2,12 +2,12 @@
 #include "vocab_core.h"
 #include "ui_utils.h"
 #include "time_utils.h"
+#include "review_engine.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
 
-int get_need_review_count(void); // 临时声明
 
 // encrypt_data
     void encrypt_data(void *data, int len) {// 加密数据的函数，使用简单的异或加密方法对数据进行加密

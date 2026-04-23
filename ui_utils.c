@@ -41,8 +41,10 @@ void trim(char *str) {
 
 int strcasecmp_custom(const char *a, const char *b) {
     while (*a && *b) {
-        if (tolower((unsigned char)*a) != tolower((unsigned char)*b))
-            return -1;
+        unsigned char ca = tolower((unsigned char)*a);
+        unsigned char cb = tolower((unsigned char)*b);
+        if (ca != cb)
+            return ca - cb;
         a++;
         b++;
     }
