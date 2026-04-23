@@ -968,7 +968,9 @@ int main() {
         if (elapsed <= 0) return 1.0;// 如果时间差小于等于0，肯定遗忘
 
         // 计算回忆概率 R = exp(-elapsed / stability)
-        double recall = exp(-elapsed / w->stability);
+        double ratio = elapsed / w->stability;
+        if (ratio > 30.0) return 1.0; // 
+        double recall = exp(-ratio);// 计算回忆概率
         double forgetting = 1.0 - recall;// 计算遗忘概率 = 1 - 回忆概率
 
         if (forgetting < 0) forgetting = 0;// 如果遗忘概率小于0，设置为0
