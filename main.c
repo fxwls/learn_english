@@ -679,6 +679,7 @@ int main() {
 
         if (is_correct) {// 如果用户回答正确
             double increase = elapsed / (w->stability + 1) * (double)g_vocab.gain;// 计算增加的记忆稳定性
+            if (increase > 1.0) increase = 1.0;// 如果增加的记忆稳定性大于1.0，设置为1.0
             if (increase < 0.02) increase = 0.02;// 如果增加的记忆稳定性小于0.02，设置为0.02
             w->stability *= (float)(1.0 + increase);// 计算增加的记忆稳定性
             if (w->stability > LEVEL_7_INTERVAL) w->stability = LEVEL_7_INTERVAL;// 如果记忆稳定性大于7级，设置为7级
