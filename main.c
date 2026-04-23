@@ -1289,7 +1289,10 @@ int main() {
         }
 
         do {// 循环查找所有.dat文件
-            if (strstr(find_data.cFileName, "_backup") != NULL) continue;
+            size_t len = strlen(find_data.cFileName);
+            if (len > 10 && strcmp(find_data.cFileName + len - 10, "_backup.dat") == 0) {
+                continue; // 跳过备份文件
+            }
             if (dat_count >= 50) break; // 如果文件数量超过50，停止查找
             strncpy(dat_files[dat_count], find_data.cFileName, 255); // 将找到的.dat文件名复制到dat_files数组中
             dat_files[dat_count][255] = '\0'; // 确保字符串以null结尾，防止溢出
