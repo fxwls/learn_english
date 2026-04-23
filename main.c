@@ -778,7 +778,7 @@ int main() {
         
             // 更新单词状态
             update_word_level(word, is_correct);
-        
+            save_vocab();  // 实时保存进度
 
             printf("\n按回车键继续复习（输入q退出复习）...");
             char line[16];
@@ -1042,6 +1042,7 @@ int main() {
             update_word_level(word, is_correct);
             reviewed++;
             g_vocab.total_review++;// 总复习次数加一
+            save_vocab();  // 实时保存进度
 
             // 按回车键继续复习
             printf("按回车键继续复习(输入q退出)...\n");
