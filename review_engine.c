@@ -321,11 +321,12 @@
         printf("2. 英译中测试\n");
         printf("请输入你的选择(1/2): ");
 
-        if (scanf("%d", &choice) != 1 ) {
-            choice = 0;
-            while (getchar() != '\n');
+        char line[16];
+        if (!safe_input(line, sizeof(line))) {
+        choice = 0;
+        } else {
+            choice = atoi(line);
         }
-        getchar(); // 清除输入缓冲区中的换行符
 
         if (choice == 2) {
             current_test_mode = MODE_EN_TO_CN; // 设置测试模式为英译中

@@ -349,8 +349,9 @@
         printf("中文释义: %s\n", g_vocab.words[index].chinese);
 
         printf("\n确认删除吗?(y/n)");
-        char c;
-        scanf("%c", &c);
+        char line[10];
+        safe_input(line, sizeof(line));
+        char c = line[0];
         if (c != 'y' && c != 'Y') {
             printf("取消删除。\n");
             printf("\n按回车键返回主菜单...");

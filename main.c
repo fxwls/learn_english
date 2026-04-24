@@ -41,8 +41,12 @@ int main() {
         printf("[9]编辑 [10]删除 [11]设置 [12]退出\n");
         printf("选择：");
 
-        if (scanf("%d", &choice) != 1) { choice=0; while(getchar()!='\n'); }
-        getchar();
+        char line[16];
+        if (!safe_input(line, sizeof(line))) {
+            choice = 0;
+        } else {
+            choice = atoi(line);
+        }
 
         switch(choice) {
             case 1: add_word(); break;
@@ -55,7 +59,8 @@ int main() {
             case 8:
                 clear_screen();
                 printf("[1]新建 [2]切换 [3]恢复\n选择：");
-                int s; scanf("%d",&s); getchar();
+                safe_input(line, sizeof(line));
+                int s = atoi(line);
                 if(s==1) create_new_vocab();
                 else if(s==2) switch_vocab();
                 else if(s==3) restore_vocab();
@@ -65,7 +70,8 @@ int main() {
             case 11:
                 clear_screen();
                 printf("[1]重置 [2]时间 [3]目标\n选择：");
-                int t; scanf("%d",&t); getchar();
+                safe_input(line, sizeof(line));
+                int t = atoi(line);
                 if(t==1) reset_learning_params();
                 else if(t==2) set_mock_time();
                 else if(t==3) set_daily_goal();

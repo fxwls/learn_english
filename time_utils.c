@@ -1,6 +1,7 @@
 // time_utils.c
 #include "time_utils.h"
 #include "vocab_core.h"
+#include "ui_utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -20,43 +21,47 @@ void set_mock_time(void) {
     printf("4. 增加指定天数\n");
     printf("5. 重置为真实时间\n");
     printf("请输入你的选择(1-5): ");
-    int choice;
-    if (scanf("%d", &choice) != 1) {
-        while(getchar() != '\n');
+
+    char buf[32];
+    if (!safe_input(buf, sizeof(buf))) {
+        printf("输入无效，将返回。\n");
         return;
     }
-    while (getchar() != '\n');
+    int choice = atoi(buf);
+
     if (choice < 1 || choice > 5) {
         printf("无效的选择，将返回。\n");
         return;
     }
+
     if (g_mock_time == 0) {
         g_mock_time = time(NULL);
     }
-    int delta;
+
+    int delta = 0;
     switch(choice) {
         case 1:
             printf("增加的小时数: ");
-            scanf("%d", &delta);
-            while (getchar() != '\n');
+            safe_input(buf, sizeof(buf));
+            delta = atoi(buf);
             g_mock_time += delta * 3600;
             break;
         case 2:
             printf("增加的分钟数: ");
-            scanf("%d", &delta);
-            while (getchar() != '\n');
+            safe_input(buf, sizeof(buf));
+            delta = atoi(buf);
             g_mock_time += delta * 60;
             break;
         case 3:
             printf("增加的秒数: ");
-            scanf("%d", &delta);
-            while (getchar() != '\n');
+            safe_input(buf, sizeof(buf));
+            delta = atoi(buf);
             g_mock_time += delta;
             break;
         case 4:
             printf("增加的天数: ");
-            scanf("%d", &delta);
-            while (getchar() != '\n');
+            safe_input(buf, sizeof(buf));
+            delta = atoi(buf);
             g_mock_time += delta * 86400;
             break;
         case 5:
@@ -66,10 +71,11 @@ void set_mock_time(void) {
             printf("无效的选择，将返回。\n");
             return;
     }
+
     time_t new_time = get_current_time();
     printf("模拟时间已更新为: %s\n", ctime(&new_time));
     printf("\n按回车键返回主菜单...");
-    getchar();
+    safe_input(buf, sizeof(buf));
 }
 
 int get_today(void) {
