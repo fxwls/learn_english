@@ -276,11 +276,11 @@
         g_current_backup_vocab_file[299] = '\0'; // 确保字符串以null结尾，防止溢出
 
         save_vocab(); // 保存恢复后的词库信息到当前词库文件中
-        backup_vocab(); // 创建新的备份文件，保存当前词库的状态
 
         printf("数据恢复成功！\n");
         printf("已从 [%s] 恢复 %d 个单词到 [%s]\n",
            selected_backup, g_vocab.count, g_current_vocab_file);
+        printf("提示：原备份文件未被修改，建议在关闭程序前手动保留备份。\n");
         printf("按回车键返回主菜单...");
         getchar();
     }
