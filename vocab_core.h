@@ -58,6 +58,7 @@ typedef struct {
     int continuous_days;
     int last_study_date;
     int daily_goal;
+    int require_daily_add;
 } Vocab;
 
 typedef enum {

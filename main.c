@@ -69,12 +69,29 @@ int main() {
             case 10: delete_word(); break;
             case 11:
                 clear_screen();
-                printf("[1]重置 [2]时间 [3]目标\n选择：");
+                set_color(COLOR_TITLE);
+                printf("==================== 设置 ====================\n");
+                set_color(COLOR_DEFAULT);
+                printf("  [1] 重置学习参数\n");
+                printf("  [2] 模拟时间\n");
+                printf("  [3] 每日学习目标\n");
+                printf("  [4] 每日添加单词限制（当前：%s）\n", g_vocab.require_daily_add ? "启用" : "禁用");
+                printf("  [0] 返回主菜单\n");
+                set_color(COLOR_WARN);
+                printf("请选择：");
+                set_color(COLOR_DEFAULT);
+    
+                char line[16];
                 safe_input(line, sizeof(line));
                 int t = atoi(line);
-                if(t==1) reset_learning_params();
-                else if(t==2) set_mock_time();
-                else if(t==3) set_daily_goal();
+    
+                switch(t) {
+                    case 1: reset_learning_params(); break;
+                    case 2: set_mock_time(); break;
+                    case 3: set_daily_goal(); break;
+                    case 4: toggle_require_daily_add(); break;
+                    default: break;
+                }
                 break;
             case 12:
                 save_vocab(); backup_vocab();

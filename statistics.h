@@ -9,5 +9,6 @@ void write_daily_log(void);
 void show_statistics(void);
 void reset_learning_params(void);
 void set_daily_goal(void);
+void toggle_require_daily_add(void);
 
 #endif

@@ -80,6 +80,12 @@
         if (!fp) {
             printf("首次运行，未找到词库文件，已初始化空词库！\n");
             printf("提示：请先通过[录入新单词]功能添加至少一个单词，才能开始复习！\n");
+            printf("提示：你可以在[设置]中关闭此限制。\n");            
+
+            //设置默认配置
+            g_vocab.daily_goal = 10; // 默认每日学习目标为10个单词
+            g_vocab.require_daily_add = 1;// 默认要求每天添加新单词
+            save_vocab(); // 保存初始配置到文件中
             return;
         }
 
@@ -127,13 +133,6 @@
         }
 
         g_vocab = tmp; // 将解密后的词库信息赋值给全局变量g_vocab
-        // 兼容旧版词库
-        if (g_vocab.daily_stats_count < 0 || g_vocab.daily_stats_count > 30) {
-            g_vocab.daily_stats_count = 0;
-        }
-        if (g_vocab.gain < 0.01f || g_vocab.gain > 1.0f) g_vocab.gain = 0.10f;
-        if (g_vocab.loss < 0.01f || g_vocab.loss > 0.99f) g_vocab.loss = 0.30f;
-        if (g_vocab.total_review < 0) g_vocab.total_review = 0;
 
         printf("已加载词库文件：%s\n", g_current_vocab_file);// 提示用户加载的词库文件名
         printf("已加载 %d个单词!\n", g_vocab.count); // 打印加载的单词数量
@@ -336,6 +335,7 @@
         g_vocab.continuous_days = 0;
         g_vocab.last_study_date = 0;
         g_vocab.daily_stats_count = 0;
+        g_vocab.require_daily_add = 1;// 默认要求每天添加新单词
 
         printf("新词库 %s 创建成功！\n", g_current_vocab_file); // 提示用户新词库创建成功，并显示新词库的文件名
         save_vocab(); // 保存空文件

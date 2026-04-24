@@ -202,8 +202,8 @@
         if (!safe_input(line, sizeof(line))) {
             printf("无效的目标，将返回。\n");
             return;
-}
-int goal = atoi(line);
+        }
+        int goal = atoi(line);
         if (goal < 1) goal = 10;
         g_vocab.daily_goal = goal;
         save_vocab();
@@ -211,3 +211,20 @@ int goal = atoi(line);
         printf("\n按回车键返回主菜单...");
         getchar();
     }
+
+    void toggle_require_daily_add(void) {
+    printf("\n=====每日添加单词限制=====\n");
+    printf("当前状态：%s\n", g_vocab.require_daily_add ? "启用（复习前必须添加新词）" : "禁用");
+    printf("是否切换？(y/n): ");
+    char confirm[10];
+    safe_input(confirm, sizeof(confirm));
+    if (tolower(confirm[0]) == 'y') {
+        g_vocab.require_daily_add = !g_vocab.require_daily_add;
+        save_vocab();
+        printf("已切换为：%s\n", g_vocab.require_daily_add ? "启用" : "禁用");
+    } else {
+        printf("取消操作。\n");
+    }
+    printf("\n按回车键返回主菜单...");
+    getchar();
+}

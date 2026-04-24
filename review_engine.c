@@ -81,9 +81,10 @@
         clear_screen();
         // ======每日必须先添加单词才能复习 ======
         int today = get_today();
-        if (g_vocab.last_add_date != today) {
+        if (g_vocab.require_daily_add && g_vocab.last_add_date != today) {
             printf("今日还未添加新单词！\n");
             printf("请先录入至少1个单词，才能开始复习！\n");
+            printf("提示：你可以在[设置]中关闭此限制。\n");
             printf("按回车键返回主菜单...");
             getchar();
             return;
