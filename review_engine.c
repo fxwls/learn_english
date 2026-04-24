@@ -418,9 +418,9 @@
                 printf("------------------------------------------------\n");
                 printf("共 %d 个待复习单词\n", need_count);
                 printf("操作：n-下一页 p-上一页 q-返回主菜单：");
-                choice = getchar();
-                while (getchar() != '\n');// 清除输入缓冲区
-                choice = tolower(choice); // 转为小写
+                char line[16];
+                safe_input(line, sizeof(line));
+                choice = tolower(line[0]);
 
                 if (choice == 'n' ) {
                     if (current_page < total_pages) current_page++;

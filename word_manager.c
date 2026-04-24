@@ -144,9 +144,9 @@
 
             printf("\n共 %d 个单词\n", g_vocab.count);
             printf("操作： n - 下一页  p - 上一页  q - 返回主菜单\n");
-            choice = getchar();
-            while (getchar() != '\n');
-            choice = tolower(choice);
+            char line[16];
+            safe_input(line, sizeof(line));
+            choice = tolower(line[0]);
 
             if (choice == 'n' && current_page < total_pages) {
                 current_page++;
