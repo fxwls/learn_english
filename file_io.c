@@ -192,15 +192,14 @@
         printf("==============================\n");
         printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
 
-        int choice;
-        if (scanf("%d", &choice) != 1) {
-            while (getchar() != '\n');
+        char line[16];
+        if (!safe_input(line, sizeof(line))) {
             printf("输入无效！\n");
             printf("按回车键返回主菜单...");
             getchar();
-            return; // 如果用户输入无效，提示用户并返回主菜单
+            return;
         }
-        getchar(); // 清除输入缓冲区中的换行符
+        int choice = atoi(line);
 
         if (choice == 0) {
             return; // 用户选择返回主菜单

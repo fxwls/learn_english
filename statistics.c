@@ -198,13 +198,12 @@
         printf("\n=====设置每日学习目标=====\n");
         printf("当前每日学习目标: %d\n", g_vocab.daily_goal);
         printf("请输入你的每日学习目标: ");
-        int goal;
-        if (scanf("%d", &goal) != 1) {
-            while(getchar() != '\n');
+        char line[16];
+        if (!safe_input(line, sizeof(line))) {
             printf("无效的目标，将返回。\n");
             return;
-        } 
-        getchar();
+}
+int goal = atoi(line);
         if (goal < 1) goal = 10;
         g_vocab.daily_goal = goal;
         save_vocab();
