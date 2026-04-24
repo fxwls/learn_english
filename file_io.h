@@ -15,5 +15,6 @@ int is_file_same(void);
 void encrypt_data(void *data, int len);
 void decrypt_data(void *data, int len);
 int calculate_checksum(Vocab *vocab);
+void sanitize_filename(char *name);
 
 #endif

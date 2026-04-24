@@ -292,6 +292,8 @@
         printf("请输入词库文件名(不包括扩展名):\n");
         safe_input(file_name, sizeof(file_name) - 4); // 获取用户输入的词库文件名，并存储在file_name变量中
 
+        sanitize_filename(file_name); // 对用户输入的文件名进行安全处理，去除非法字符，防止路径穿越等安全问题
+
         if (strlen(file_name) == 0) {
             printf("文件名不能为空！\n");
             printf("按回车键返回主菜单...");
@@ -301,6 +303,21 @@
         // 添加.dat扩展名
         char new_file[256];
         snprintf(new_file, sizeof(new_file), "%s.dat", file_name); // 构造新的词库文件名，添加.dat扩展名
+
+        // 检查文件是否已存在
+        FILE *test = fopen(new_file, "rb");
+        if (test) {
+            fclose(test);
+            printf("词库文件 %s 已存在，是否覆盖？(y/n): ", new_file);
+            char confirm[10];
+            safe_input(confirm, sizeof(confirm));
+            if (tolower(confirm[0]) != 'y') {
+                printf("已取消创建新词库！\n");
+                printf("按回车键返回主菜单...");
+                getchar();
+                return; // 如果用户选择不覆盖，提示用户并返回主菜单
+            }
+        }
         // 生成备份文件名
         char backup_file[300];
         generate_backup_filename(new_file, backup_file); // 根据新的词库文件名生成对应的备份文件名
@@ -383,6 +400,17 @@
             getchar();
             return; // 如果用户输入的文件名为空，提示用户并返回主菜单
         }
+
+        // 对用户输入的文件名进行安全处理，去除非法字符，防止路径穿越等安全问题
+        sanitize_filename(file_name);
+
+        if (strlen(file_name) == 0) {
+            printf("文件名不能为空！\n");
+            printf("按回车键返回主菜单...");
+            getchar();
+            return; // 如果用户输入的文件名为空，提示用户并返回主菜单
+            
+        }
         // 添加.dat扩展名
         char new_file[256];
         snprintf(new_file, sizeof(new_file), "%s.dat", file_name); // 构造新的词库文件名，添加.dat扩展名
@@ -444,6 +472,22 @@
                 fclose(f1);
                 fclose(f2);
                 return 0; // 如果读取的字节不同，认为文件不同
+            }
+        }
+    }
+
+    void sanitize_filename(char *name) {
+        // 去掉.dat后缀
+        char *dot = strstr(name, ".dat");
+        if (dot) {
+            *dot = '\0';
+        }
+
+        // 替换非法字符为下划线
+        const char *invalid = "/\\:*?\"<>|";
+        for (char *p = name; *p; p++) {
+            if (strchr(invalid, *p)) {
+                *p = '_';
             }
         }
     }
