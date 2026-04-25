@@ -89,7 +89,12 @@
             getchar();
             return;
         }
-        printf("\n=======单词复习=======\n");
+        printf("\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     单词复习\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
         time_t now = get_current_time();// 获取当前时间
         Word *to_review[MAX_WORD];// 定义一个指针数组，用于存储需要复习的单词的指针
         int to_review_count = 0;// 定义一个整数变量，用于记录需要复习的单词数量
@@ -121,7 +126,9 @@
         for (int i = 0; i < to_review_count; i++) {
             Word *word = to_review[i];
             clear_screen();
+            set_color(COLOR_TITLE);
             printf("【复习进度】%d/%d(输入q退出复习)\n", reviewed + 1, to_review_count);
+            set_color(COLOR_DEFAULT);
 
             // 进行单词测试，获取用户的测试结果
             int is_correct = quiz_word(word);
@@ -202,7 +209,12 @@
 // review_mistakes
     void review_mistakes() {// 专项复习错词的函数，统计错词数量，选择测试模式，按照单词ID顺序复习错词，并更新单词状态和当天统计数据
         clear_screen();
-        printf("\n=======专项复习错词本======\n\n\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     错词复习\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
+        printf("\n");
 
         // 统计错词数量
         int mistake_count = 0;
@@ -235,7 +247,6 @@
 
             clear_screen();
             printf("【错词复习进度】%d/%d\n", reviewed + 1, mistake_count);
-
             // 进行测试
             int is_correct = quiz_word(word);
             if (is_correct == -1) {
@@ -318,9 +329,13 @@
     void select_test_mode() {// 选择测试模式的函数，允许用户选择中译英测试还是英译中测试
         int choice;
         printf("\n请选择测试模式：\n");
+        set_color(COLOR_TITLE);
         printf("1. 中译英测试\n");
         printf("2. 英译中测试\n");
+        set_color(COLOR_DEFAULT);
+        set_color(COLOR_WARN);
         printf("请输入你的选择(1/2): ");
+        set_color(COLOR_DEFAULT);
 
         char line[16];
         if (!safe_input(line, sizeof(line))) {
@@ -341,7 +356,11 @@
 // show_review_rank
     void show_review_rank() {// 显示待复习单词排行榜的函数，按照单词的下次复习时间排序，显示需要复习的单词列表，并提供分页浏览功能
         clear_screen();
-        printf("\n===========待复习单词排行榜===========\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                  待复习排行榜\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         time_t now = get_current_time();
         //第一步：统计待复习数量
@@ -375,7 +394,7 @@
             printf("\n===========待复习单词排行榜 (第 %d/%d 页)===========\n",current_page, total_pages);
             printf("序号 | 英文单词 | 中文释义 | 剩余时间 | 记忆等级\n");
             printf("------------------------------------------------\n");
-
+            set_color(COLOR_TITLE);
             int start = (current_page - 1) * page_size;
             int end = start + page_size;
             if (end > need_count) end = need_count;
@@ -416,32 +435,35 @@
                         correct_rate * 100);
                 }
             }
-                printf("------------------------------------------------\n");
-                printf("共 %d 个待复习单词\n", need_count);
-                printf("操作：n-下一页 p-上一页 q-返回主菜单：");
-                char line[16];
-                safe_input(line, sizeof(line));
-                choice = tolower(line[0]);
+            set_color(COLOR_DEFAULT);
+            printf("------------------------------------------------\n");
+            printf("共 %d 个待复习单词\n", need_count);
+            set_color(COLOR_WARN);
+            printf("操作：n-下一页 p-上一页 q-返回主菜单：");
+            set_color(COLOR_DEFAULT);
+            char line[16];
+            safe_input(line, sizeof(line));
+            choice = tolower(line[0]);
 
-                if (choice == 'n' ) {
-                    if (current_page < total_pages) current_page++;
-                    else{
-                        printf("已经是最后一页了！按回车继续...\n");
-                        getchar();// 等待用户按回车
-                    }
-                } else if (choice == 'p' ){
-                    if (current_page > 1) current_page--;
-                    else {
-                        printf("已经是第一页了！按回车继续...\n");
-                        getchar();// 等待用户按回车
-                    }
-                } else if (choice == 'q' ) {
-                    break;
-                } else {
-                    printf("无效输入，按回车继续...");
-                    getchar();// 等待回车  
+            if (choice == 'n' ) {
+                if (current_page < total_pages) current_page++;
+                else{
+                    printf("已经是最后一页了！按回车继续...\n");
+                    getchar();// 等待用户按回车
                 }
-            } while (choice != 'q');
+            } else if (choice == 'p' ){
+                if (current_page > 1) current_page--;
+                else {
+                    printf("已经是第一页了！按回车继续...\n");
+                    getchar();// 等待用户按回车
+                }
+            } else if (choice == 'q' ) {
+                break;
+            } else {
+                printf("无效输入，按回车继续...");
+                getchar();// 等待回车  
+            }
+        } while (choice != 'q');
     }
 
     

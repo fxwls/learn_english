@@ -42,11 +42,13 @@ int main() {
         set_color(COLOR_DEFAULT);
         printf("词库：%s  总数：%d\n", g_current_vocab_file, g_vocab.count);
         printf("待复习：%d   今日新增：%d\n", get_need_review_count(), today_add);
-        printf("[1]添加 [2]复习 [3]浏览 [4]搜索\n");
-        printf("[5]排行 [6]错词 [7]统计 [8]词库\n");
-        printf("[9]编辑 [10]删除 [11]设置 [12]退出\n");
+        set_color(COLOR_SUCCESS);
+        printf("  [1]添加单词   [2]开始复习   [3]浏览单词   [4]搜索单词\n");
+        printf("  [5]复习排行   [6]错词复习     [7]学习统计   [8]切换词库\n");
+        printf("  [9]编辑单词   [10]删除单词  [11]高级设置  [12]保存退出\n");
+        set_color(COLOR_WARN);
         printf("选择：");
-
+        set_color(COLOR_DEFAULT);
         char line[16];
         if (!safe_input(line, sizeof(line))) {
             choice = 0;
@@ -64,7 +66,10 @@ int main() {
             case 7: show_statistics(); break;
             case 8:
                 clear_screen();
-                printf("[1]新建 [2]切换 [3]恢复\n选择：");
+                printf("[1]新建 [2]切换 [3]恢复\n");
+                set_color(COLOR_WARN);
+                printf("请选择：");
+                set_color(COLOR_DEFAULT);
                 safe_input(line, sizeof(line));
                 int s = atoi(line);
                 if(s==1) create_new_vocab();
@@ -76,21 +81,25 @@ int main() {
             case 11:
                 clear_screen();
                 set_color(COLOR_TITLE);
-                printf("==================== 设置 ====================\n");
+                printf("===================================================\n");
+                printf("                      设置\n");
+                printf("===================================================\n");
                 set_color(COLOR_DEFAULT);
+
+                printf("\n");
                 printf("  [1] 重置学习参数\n");
                 printf("  [2] 模拟时间\n");
-                printf("  [3] 每日学习目标\n");
-                printf("  [4] 每日添加单词限制（当前：%s）\n", g_vocab.require_daily_add ? "启用" : "禁用");
+                printf("  [3] 设置每日学习目标\n");
+                printf("  [4] 每日添加单词限制（当前：%s）\n", g_vocab.require_daily_add ? "开启" : "关闭");
                 printf("  [0] 返回主菜单\n");
+                printf("\n");
                 set_color(COLOR_WARN);
-                printf("请选择：");
+                printf(" 请选择：");
                 set_color(COLOR_DEFAULT);
     
-                char line[16];
                 safe_input(line, sizeof(line));
                 int t = atoi(line);
-    
+                set_color(COLOR_DEFAULT);
                 switch(t) {
                     case 1: reset_learning_params(); break;
                     case 2: set_mock_time(); break;

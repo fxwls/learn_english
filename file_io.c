@@ -197,7 +197,11 @@
 // restore_vocab
     void restore_vocab() {// 恢复词库
         clear_screen();
-        printf("=======恢复词库======\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     恢复词库\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
         if (g_mock_mode) {
             printf("模拟模式下不能恢复词库，请先重置真实时间。\n");
             printf("按回车键返回...");
@@ -332,7 +336,11 @@
 // create_new_vocab
     void create_new_vocab() {// 新建词库
         clear_screen();
-        printf("=======新建词库======\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     新建词库\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
         if (g_mock_mode) {
             printf("模拟模式下不能切换/新建词库，请先重置真实时间。\n");
             printf("按回车键返回...");
@@ -399,7 +407,11 @@
 // switch_vocab
     void switch_vocab() {// 切换词库
         clear_screen();
-        printf("=======切换词库======\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     切换词库\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
         if (g_mock_mode) {
             printf("模拟模式下不能切换/新建词库，请先重置真实时间。\n");
             printf("按回车键返回...");

@@ -54,10 +54,17 @@
         }
 
         char en[MAX_STR], zh[MAX_STR];
-        printf("\n--录入新单词--\n");
+        printf("\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     添加单词\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         // 输入英文单词
+        set_color(COLOR_WARN);
         printf("请输入英文单词： ");
+        
         if (!safe_input(en, MAX_STR) || !is_valid_english(en)) {
             printf("输入无效，英文单词只能包含字母！\n");
             printf("按回车键继续...");
@@ -81,7 +88,7 @@
             getchar();
             return; // 如果输入无效，提示用户并返回
         }
-
+        set_color(COLOR_DEFAULT);
         // 初始化新单词
         Word new_word = {0}; // 定义一个新的Word结构体变量，并将其所有字段初始化为0
         new_word.id = g_vocab.count + 1; // 设置单词ID为当前单词数量加1
@@ -112,7 +119,11 @@
 // browse_all_words
     void browse_all_words() {// 浏览所以单词的函数
         clear_screen();
-        printf("\n=====浏览所有单词=====\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     浏览单词\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         if (g_vocab.count == 0) {
             printf("当前词库为空，无法浏览。\n");
@@ -131,7 +142,7 @@
             printf("\n=========== 所有单词列表 (第 %d/%d 页) ===========\n", current_page, total_pages);
             printf("ID  | 英文单词      | 中文释义      | 记忆等级\n");
             printf("-----------------------------------------------\n");
-
+            set_color(COLOR_TITLE);
             int start = (current_page - 1) * page_size;
             int end = start + page_size;
             if (end > g_vocab.count) end = g_vocab.count;
@@ -141,9 +152,11 @@
                 printf("%3d  | %-15s | %-15s | 等级 %d\n", 
                     w->id, w->english, w->chinese, w->level);
             }
-
+            set_color(COLOR_DEFAULT);
             printf("\n共 %d 个单词\n", g_vocab.count);
+            set_color(COLOR_WARN);
             printf("操作： n - 下一页  p - 上一页  q - 返回主菜单\n");
+            set_color(COLOR_DEFAULT);
             char line[16];
             safe_input(line, sizeof(line));
             choice = tolower(line[0]);
@@ -163,7 +176,11 @@
 // search_word
     void search_word() {// 搜索单词的函数
         clear_screen();
-        printf("\n=====搜索单词=====\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     搜索单词\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         if (g_vocab.count == 0) {
             printf("词库为空，无法搜索。\n");
@@ -186,6 +203,7 @@
         printf("\n搜索结果:\n");
         printf("ID  | 英文单词      | 中文释义      | 记忆等级\n");
         printf("-----------------------------------------------\n");
+        set_color(COLOR_TITLE);
         for (int i = 0; i < g_vocab.count; i++) {
             Word *w = &g_vocab.words[i];
              
@@ -205,20 +223,23 @@
                 found ++;
             }
         }
-
+        set_color(COLOR_DEFAULT);
         if (!found) {
             printf("没有找到与关键词匹配的单词。\n");
         } else {
             printf("\n共找到 %d 个单词\n", found);
         }
-
         printf("\n按回车键返回主菜单...");
         getchar();
     }
 // edit_word
     void edit_word() {// 编辑单词的函数
         clear_screen();
-        printf("\n=====编辑单词=====\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     编辑单词\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         if (g_vocab.count == 0) {
             printf("词库为空，无法编辑。\n");
@@ -302,7 +323,11 @@
 // delete_word
     void delete_word() {// 删除单词的函数
         clear_screen();
-        printf("\n=====删除单词=====\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     删除单词\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
 
         if (g_vocab.count == 0) {
             printf("词库为空，无法删除。\n");
@@ -312,7 +337,9 @@
         }
 
         char input[256];
+        set_color(COLOR_WARN);
         printf("请输入要删除的单词的 ID 或 英文单词: ");
+        set_color(COLOR_DEFAULT);
         safe_input(input, sizeof(input));
 
         int index = -1;
@@ -348,7 +375,9 @@
         printf("英文单词: %s\n", g_vocab.words[index].english);
         printf("中文释义: %s\n", g_vocab.words[index].chinese);
 
+        set_color(COLOR_WARN);
         printf("\n确认删除吗?(y/n)");
+        set_color(COLOR_DEFAULT);
         char line[10];
         safe_input(line, sizeof(line));
         char c = line[0];

@@ -67,7 +67,11 @@
 // show_statistics
     void show_statistics() {// 显示复习统计
         clear_screen();
-        printf("\n=======复习统计=======\n");
+        set_color(COLOR_TITLE);
+        printf("===================================================\n");
+        printf("                     学习统计\n");
+        printf("===================================================\n");
+        set_color(COLOR_DEFAULT);
         printf("连续学习天数：%d\n", g_vocab.continuous_days);
         printf("每日目标：%d\n", g_vocab.daily_goal);
         // 先展示学习率
