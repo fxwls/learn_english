@@ -85,6 +85,8 @@
             //设置默认配置
             g_vocab.daily_goal = 10; // 默认每日学习目标为10个单词
             g_vocab.require_daily_add = 1;// 默认要求每天添加新单词
+            g_vocab.gain = 0.10f; // 默认答对增长系数为0.10
+            g_vocab.loss = 0.30f; // 默认答错减少系数为0.30
             save_vocab(); // 保存初始配置到文件中
             return;
         }
@@ -133,6 +135,8 @@
         }
 
         g_vocab = tmp; // 将解密后的词库信息赋值给全局变量g_vocab
+        if (g_vocab.gain < 0.02f || g_vocab.gain > 0.50f) g_vocab.gain = 0.10f; // 如果gain参数不在合理范围内，重置为默认值
+        if (g_vocab.loss < 0.05f || g_vocab.loss > 0.80f) g_vocab.loss = 0.30f; // 如果loss参数不在合理范围内，重置为默认值
 
         printf("已加载词库文件：%s\n", g_current_vocab_file);// 提示用户加载的词库文件名
         printf("已加载 %d个单词!\n", g_vocab.count); // 打印加载的单词数量
