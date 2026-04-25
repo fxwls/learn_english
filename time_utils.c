@@ -2,6 +2,8 @@
 #include "time_utils.h"
 #include "vocab_core.h"
 #include "ui_utils.h"
+#include "file_io.h"
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,6 +12,7 @@
 time_t get_current_time(void) {
     return (g_mock_time > 0) ? g_mock_time : time(NULL);
 }
+
 
 void set_mock_time(void) {
     printf("\n=====设置模拟时间=====\n");
@@ -20,7 +23,9 @@ void set_mock_time(void) {
     printf("3. 增加指定秒数\n");
     printf("4. 增加指定天数\n");
     printf("5. 重置为真实时间\n");
+    set_color(COLOR_WARN);
     printf("请输入你的选择(1-5): ");
+    set_color(COLOR_DEFAULT);
 
     char buf[32];
     if (!safe_input(buf, sizeof(buf))) {
@@ -28,16 +33,69 @@ void set_mock_time(void) {
         return;
     }
     int choice = atoi(buf);
-
     if (choice < 1 || choice > 5) {
         printf("无效的选择，将返回。\n");
         return;
     }
 
-    if (g_mock_time == 0) {
-        g_mock_time = time(NULL);
+    // 选择5：重置为真实时间
+    if (choice == 5) {
+        if (g_mock_mode) {
+            printf("正在退出模拟时间模式，恢复原始词库...\n");
+            if (remove(g_current_vocab_file) != 0) {
+                printf("警告：无法删除临时文件 %s\n", g_current_vocab_file);
+            }
+            strcpy(g_current_vocab_file, g_original_vocab_file);
+            load_vocab();
+            g_mock_time = 0;
+            g_mock_mode = 0;
+            printf("已恢复真实时间模式。\n");
+        } else {
+            g_mock_time = 0;
+            printf("已重置为真实时间。\n");
+        }
+        printf("\n按回车键返回主菜单...");
+        safe_input(buf, sizeof(buf));
+        return;
     }
 
+    // 选择1-4：增加时间
+    // 如果尚未进入模拟模式，则先创建沙盒
+    if (!g_mock_mode) {
+        printf("首次使用模拟时间，正在创建独立模拟词库...\n");
+        // 保存原始词库文件名
+        strcpy(g_original_vocab_file, g_current_vocab_file);
+        // 构造临时文件名
+        char tmp_file[300];
+        char *dot = strstr(g_original_vocab_file, ".dat");
+        if (dot) {
+            int len = dot - g_original_vocab_file;
+            strncpy(tmp_file, g_original_vocab_file, len);
+            tmp_file[len] = '\0';
+            strcat(tmp_file, "_mock.dat");
+        } else {
+            snprintf(tmp_file, sizeof(tmp_file), "%s_mock.dat", g_original_vocab_file);
+        }
+        // 复制词库
+        if (copy_file(g_original_vocab_file, tmp_file) != 0) {
+            printf("错误：无法创建模拟词库副本！请检查磁盘空间或文件权限。\n");
+            printf("按回车键返回...");
+            safe_input(buf, sizeof(buf));
+            return;
+        }
+        // 切换到临时文件
+        strcpy(g_current_vocab_file, tmp_file);
+        load_vocab();
+        // 初始化模拟时间为当前真实时间
+        g_mock_time = time(NULL);
+        g_mock_mode = 1;
+        printf("模拟词库已创建：%s\n", g_current_vocab_file);
+        printf("提示：所有修改将保存在模拟词库中，重置真实时间后自动丢弃。\n");
+        // ★★★ 关键：创建沙盒后不要返回，继续执行下面的时间增加 ★★★
+    }
+
+    set_color(COLOR_WARN);
+    // 现在增加时间（根据用户之前的选择，输入具体数值）
     int delta = 0;
     switch(choice) {
         case 1:
@@ -64,14 +122,10 @@ void set_mock_time(void) {
             delta = atoi(buf);
             g_mock_time += delta * 86400;
             break;
-        case 5:
-            g_mock_time = 0;
-            break;
         default:
-            printf("无效的选择，将返回。\n");
-            return;
+            break;
     }
-
+    set_color(COLOR_DEFAULT);
     time_t new_time = get_current_time();
     printf("模拟时间已更新为: %s\n", ctime(&new_time));
     printf("\n按回车键返回主菜单...");
@@ -100,4 +154,38 @@ time_t date_to_time_t(int date) {
 void format_time(time_t t, char *buf, int size) {
     if (t == 0) { strcpy(buf, "未复习"); return; }
     strftime(buf, size, "%Y-%m-%d %H:%M:%S", localtime(&t));
+}
+
+static int copy_file(const char *src, const char *dst) {
+    FILE *fsrc = fopen(src, "rb");
+    if (!fsrc) return -1;
+    FILE *fdst = fopen(dst, "wb");
+    if (!fdst) {
+        fclose(fsrc);
+        return -1;
+    }
+    unsigned char buf[4096];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), fsrc)) > 0) {
+        fwrite(buf, 1, n, fdst);
+    }
+    fclose(fsrc);
+    fclose(fdst);
+    return 0;
+}
+
+void cleanup_mock_mode(void) {
+    if (g_mock_mode) {
+        // 删除临时模拟词库文件
+        if (remove(g_current_vocab_file) == 0) {
+            printf("已清理模拟临时文件：%s\n", g_current_vocab_file);
+        } else {
+            printf("警告：无法删除模拟临时文件 %s\n", g_current_vocab_file);
+        }
+        // 恢复原始词库文件名（避免下次启动时路径错误）
+        strcpy(g_current_vocab_file, g_original_vocab_file);
+        // 重置模拟模式标志
+        g_mock_mode = 0;
+        g_mock_time = 0;
+    }
 }

@@ -71,5 +71,7 @@ extern time_t g_mock_time;
 extern char g_current_vocab_file[256];
 extern char g_current_backup_vocab_file[300];
 extern TestMode current_test_mode;
+extern int g_mock_mode;
+extern char g_original_vocab_file[256];
 
 #endif

@@ -33,6 +33,12 @@ int main() {
         }
         set_color(COLOR_TITLE);
         printf("===== 艾宾浩斯记忆系统 =====\n");
+        if (g_mock_mode) {
+            set_color(COLOR_WARN);
+            printf("当前处于模拟时间模式！\n");
+            set_color(COLOR_DEFAULT);
+        }
+        printf("\n");
         set_color(COLOR_DEFAULT);
         printf("词库：%s  总数：%d\n", g_current_vocab_file, g_vocab.count);
         printf("待复习：%d   今日新增：%d\n", get_need_review_count(), today_add);
@@ -94,8 +100,8 @@ int main() {
                 }
                 break;
             case 12:
-                save_vocab(); backup_vocab();
-                printf("已保存\n"); break;
+                save_vocab(); backup_vocab();cleanup_mock_mode();
+                printf("已保存并清理模拟词库，请按回车键退出\n"); break;
             default: printf("无效\n"); system("pause");
         }
     } while(choice != 12);

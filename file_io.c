@@ -286,6 +286,12 @@
     void create_new_vocab() {// 新建词库
         clear_screen();
         printf("=======新建词库======\n");
+        if (g_mock_mode) {
+            printf("模拟模式下不能切换/新建词库，请先重置真实时间。\n");
+            printf("按回车键返回...");
+            getchar();
+            return;
+        }
 
         char file_name[256];
         printf("请输入词库文件名(不包括扩展名):\n");
@@ -347,6 +353,12 @@
     void switch_vocab() {// 切换词库
         clear_screen();
         printf("=======切换词库======\n");
+        if (g_mock_mode) {
+            printf("模拟模式下不能切换/新建词库，请先重置真实时间。\n");
+            printf("按回车键返回...");
+            getchar();
+            return;
+        }
         printf("当前词库：%s\n\n", g_current_vocab_file); // 显示当前使用的词库文件名
 
         char dat_files[50][256]; // 定义一个二维数组，用于存储当前目录下的.dat文件名，最多支持50个文件，每个文件名最长255字符

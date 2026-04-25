@@ -10,5 +10,7 @@ int get_today(void);
 int time_to_date(time_t t);
 time_t date_to_time_t(int date);
 void format_time(time_t t, char *buf, int buf_size);
+static int copy_file(const char *src, const char *dst);
+void cleanup_mock_mode(void);
 
 #endif
