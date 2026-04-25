@@ -13,6 +13,24 @@ time_t get_current_time(void) {
     return (g_mock_time > 0) ? g_mock_time : time(NULL);
 }
 
+static int copy_file(const char *src, const char *dst) {
+    FILE *fsrc = fopen(src, "rb");
+    if (!fsrc) return -1;
+    FILE *fdst = fopen(dst, "wb");
+    if (!fdst) {
+        fclose(fsrc);
+        return -1;
+    }
+    unsigned char buf[4096];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), fsrc)) > 0) {
+        fwrite(buf, 1, n, fdst);
+    }
+    fclose(fsrc);
+    fclose(fdst);
+    return 0;
+}
+
 
 void set_mock_time(void) {
     printf("\n=====设置模拟时间=====\n");
@@ -156,23 +174,6 @@ void format_time(time_t t, char *buf, int size) {
     strftime(buf, size, "%Y-%m-%d %H:%M:%S", localtime(&t));
 }
 
-static int copy_file(const char *src, const char *dst) {
-    FILE *fsrc = fopen(src, "rb");
-    if (!fsrc) return -1;
-    FILE *fdst = fopen(dst, "wb");
-    if (!fdst) {
-        fclose(fsrc);
-        return -1;
-    }
-    unsigned char buf[4096];
-    size_t n;
-    while ((n = fread(buf, 1, sizeof(buf), fsrc)) > 0) {
-        fwrite(buf, 1, n, fdst);
-    }
-    fclose(fsrc);
-    fclose(fdst);
-    return 0;
-}
 
 void cleanup_mock_mode(void) {
     if (g_mock_mode) {

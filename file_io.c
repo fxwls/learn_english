@@ -160,6 +160,12 @@
     void restore_vocab() {// 恢复词库
         clear_screen();
         printf("=======恢复词库======\n");
+        if (g_mock_mode) {
+            printf("模拟模式下不能恢复词库，请先重置真实时间。\n");
+            printf("按回车键返回...");
+            getchar();
+            return;
+        }
 
         char backup_file[50][300]; // 定义一个二维数组，用于存储当前目录下的备份文件名，最多支持50个文件，每个文件名最长255字符
         int backup_count = 0; // 定义一个整数变量，用于记录当前目录下的备份文件数量

@@ -100,7 +100,9 @@ int main() {
                 }
                 break;
             case 12:
-                save_vocab(); backup_vocab();cleanup_mock_mode();
+                save_vocab();
+                if (!g_mock_mode) backup_vocab();
+                cleanup_mock_mode();
                 printf("已保存并清理模拟词库，请按回车键退出\n"); break;
             default: printf("无效\n"); system("pause");
         }
