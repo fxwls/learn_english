@@ -14,10 +14,10 @@
 
 int main() {
     #ifdef _WIN32
-    // === 强制 UTF-8 代码块开始 ===
-    system("chcp 65001 > nul");   // 切换控制台代码页为 UTF-8
-    setlocale(LC_ALL, ".UTF-8");  // 设置区域为 UTF-8
-    // === 强制 UTF-8 代码块结束 ===
+    system("chcp 65001 > nul");
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    setlocale(LC_ALL, "zh_CN.UTF-8");
     #endif
     load_vocab();
     printf("加载完成，按回车继续...");

@@ -9,6 +9,40 @@
 #include <ctype.h>
 #include <windows.h>
 
+// 将系统默认编码（简体中文 Windows 为 GBK）转换为 UTF-8
+// 返回动态分配的字符串，调用者需 free
+    static char* ansi_to_utf8(const char *ansi_str) {
+        if (!ansi_str) return NULL;
+        // 计算宽字符长度
+        int wlen = MultiByteToWideChar(CP_ACP, 0, ansi_str, -1, NULL, 0);
+        if (wlen <= 0) return NULL;
+        wchar_t *wbuf = (wchar_t*)malloc(wlen * sizeof(wchar_t));
+        if (!wbuf) return NULL;
+        MultiByteToWideChar(CP_ACP, 0, ansi_str, -1, wbuf, wlen);
+        // 计算 UTF-8 长度
+        int ulen = WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, NULL, 0, NULL, NULL);
+        if (ulen <= 0) {
+            free(wbuf);
+            return NULL;
+        }
+        char *ubuf = (char*)malloc(ulen);
+        if (!ubuf) {
+            free(wbuf);
+            return NULL;
+        }
+        WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, ubuf, ulen, NULL, NULL);
+        free(wbuf);
+        return ubuf;
+    }
+
+// 获取纯文件名（去除路径）
+    const char *get_basename(const char *path) {
+        const char *base = strrchr(path, '\\');
+        if (!base) base = strrchr(path, '/');
+        if (!base) base = path;
+        else base++;
+        return base;
+    }   
 
 // encrypt_data
     void encrypt_data(void *data, int len) {// 加密数据的函数，使用简单的异或加密方法对数据进行加密
@@ -196,7 +230,10 @@
         printf("可恢复的备份文件:\n");
         printf("==============================\n");
         for (int i = 0; i < backup_count; i++) {
-            printf("%d. %s\n", i + 1, backup_file[i]);
+            char *display_name = ansi_to_utf8(backup_file[i]);
+            if (!display_name) display_name = backup_file[i];
+            printf("%d. %s\n", i + 1, display_name);
+            if (display_name != backup_file[i]) free(display_name);
         }
         printf("==============================\n");
         printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
@@ -384,9 +421,11 @@
         }
 
         do {// 循环查找所有.dat文件
-            size_t len = strlen(find_data.cFileName);
-            if (len > 10 && strcmp(find_data.cFileName + len - 10, "_backup.dat") == 0) {
-                continue; // 跳过备份文件
+            const char *fname = find_data.cFileName;
+            if (strstr(fname, "_backup.dat") != NULL && 
+                strlen(fname) > strlen("_backup.dat") && 
+                strcmp(fname + strlen(fname) - strlen("_backup.dat"), "_backup.dat") == 0) {
+                continue;
             }
             if (dat_count >= 50) break; // 如果文件数量超过50，停止查找
             strncpy(dat_files[dat_count], find_data.cFileName, 255); // 将找到的.dat文件名复制到dat_files数组中
@@ -402,14 +441,17 @@
             return;
         }
 
-        printf("可切换的词库文件:\n");// 输出当前目录下的所有.dat文件，供用户选择切换
-        printf("==============================\n");
+        // 显示列表
+        const char *current_base = get_basename(g_current_vocab_file);
         for (int i = 0; i < dat_count; i++) {
-            if (strcmp(dat_files[i], g_current_vocab_file) == 0) {
-                printf("%d. %s (当前使用)\n", i + 1, dat_files[i]); // 如果文件名与当前使用的词库文件名相同，标记为当前使用
+            char *display_name = ansi_to_utf8(dat_files[i]);
+            if (!display_name) display_name = dat_files[i];
+            if (strcmp(display_name, current_base) == 0) {   // 修改这行
+                printf("%d. %s (当前使用)\n", i + 1, display_name);
             } else {
-                printf("%d. %s\n", i + 1, dat_files[i]); // 否则正常显示文件名
+                printf("%d. %s\n", i + 1, display_name);
             }
+            if (display_name != dat_files[i]) free(display_name);
         }
         printf("==============================\n");
 
@@ -498,18 +540,27 @@
         }
     }
 
-    void sanitize_filename(char *name) {
-        // 去掉.dat后缀
-        char *dot = strstr(name, ".dat");
-        if (dot) {
-            *dot = '\0';
-        }
+    void sanitize_filename(char *name) {// 对用户输入的文件名进行安全处理，去除非法字符，防止路径穿越等安全问题
+        if (!name || *name == '\0')
+            return;
 
-        // 替换非法字符为下划线
-        const char *invalid = "/\\:*?\"<>|";
-        for (char *p = name; *p; p++) {
-            if (strchr(invalid, *p)) {
+        // 仅过滤 Windows 非法文件符号，【完全不处理中文】
+        const char *invalidChars = "\\/:*?\"<>|";
+        char *p = name;
+        while (*p != '\0')
+        {
+            if (strchr(invalidChars, *p))
+            {
                 *p = '_';
             }
+            p++;
+        }
+
+        // 剔除手动输入带的 .dat 后缀
+        char *dot = strstr(name, ".dat");
+        if (dot != NULL)
+        {
+            *dot = '\0';
         }
     }
+
