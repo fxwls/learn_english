@@ -3,6 +3,7 @@
 #define STATISTICS_H
 
 #include "vocab_core.h"
+#include "file_io.h"
 
 DailyStat* get_today_daily_stat(void);
 void write_daily_log(void);
@@ -10,5 +11,6 @@ void show_statistics(void);
 void reset_learning_params(void);
 void set_daily_goal(void);
 void toggle_require_daily_add(void);
+void manual_backup(void);
 
 #endif

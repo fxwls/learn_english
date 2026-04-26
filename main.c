@@ -91,6 +91,7 @@ int main() {
                 printf("  [2] 模拟时间\n");
                 printf("  [3] 设置每日学习目标\n");
                 printf("  [4] 每日添加单词限制（当前：%s）\n", g_vocab.require_daily_add ? "开启" : "关闭");
+                printf("  [5] 手动备份当前词库\n");
                 printf("  [0] 返回主菜单\n");
                 printf("\n");
                 set_color(COLOR_WARN);
@@ -105,6 +106,7 @@ int main() {
                     case 2: set_mock_time(); break;
                     case 3: set_daily_goal(); break;
                     case 4: toggle_require_daily_add(); break;
+                    case 5: manual_backup(); break;
                     default: break;
                 }
                 break;

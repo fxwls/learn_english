@@ -16,5 +16,6 @@ void encrypt_data(void *data, int len);
 void decrypt_data(void *data, int len);
 int calculate_checksum(Vocab *vocab);
 void sanitize_filename(char *name);
+const char* get_basename(const char *path);
 
 #endif

@@ -50,19 +50,31 @@
         return &g_vocab.daily_stats[pos];
     }
 // write_daily_log
-    void write_daily_log() {// 写入日志
-        FILE *log = fopen("daily_review.log", "w");// 以写入模式打开日志文件，如果文件不存在会创建新文件
+    void write_daily_log() {
+        // 生成独立日志文件名：daily_review_词库名.log
+        char log_filename[512];
+        const char *vocab_base = get_basename(g_current_vocab_file);
+        char base_no_ext[256];
+        strncpy(base_no_ext, vocab_base, sizeof(base_no_ext) - 1);
+        base_no_ext[sizeof(base_no_ext) - 1] = '\0';
+        char *dot = strstr(base_no_ext, ".dat");
+        if (dot) *dot = '\0';
+        snprintf(log_filename, sizeof(log_filename), "daily_review_%s.log", base_no_ext);
+
+        FILE *log = fopen(log_filename, "w");
         if (!log) {
-            printf("日志文件创建失败！\n");
+            printf("日志文件创建失败！(%s)\n", log_filename);
             return;
         }
 
         for (int i = 0; i < g_vocab.daily_stats_count; i++) {
             DailyStat *stat = &g_vocab.daily_stats[i];
             double rate = (stat->total_count == 0) ? 0.0 : (double)stat->correct_count / stat->total_count * 100;
-            fprintf(log, "%04d-%02d-%02d %d %d  %.2f%%\n", stat->date / 10000, stat->date % 10000 / 100, stat->date % 100, stat->correct_count, stat->total_count, rate); // 将日志写入文件中，格式为年月日：正确率%%%")
+            fprintf(log, "%04d-%02d-%02d %d %d  %.2f%%\n",
+                    stat->date / 10000, (stat->date / 100) % 100, stat->date % 100,
+                    stat->correct_count, stat->total_count, rate);
         }
-        fclose(log); // 关闭日志文件
+        fclose(log);
     }
 // show_statistics
     void show_statistics() {// 显示复习统计
@@ -230,5 +242,14 @@
         printf("取消操作。\n");
     }
     printf("\n按回车键返回主菜单...");
+    getchar();
+}
+
+void manual_backup(void) {
+    printf("\n=====手动备份当前词库=====\n");
+    printf("正在备份当前词库：%s\n", g_current_vocab_file);
+    backup_vocab();
+    printf("手动备份完成！\n");
+    printf("按回车键返回主菜单...");
     getchar();
 }
