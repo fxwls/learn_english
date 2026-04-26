@@ -65,7 +65,6 @@
         if (choice == 5) {
             if (g_mock_mode) {
                 printf("正在退出模拟时间模式，恢复原始词库...\n");
-
                 cleanup_mock_mode();
                 load_vocab();
                 printf("已恢复真实时间模式。\n");
@@ -176,8 +175,13 @@
     }
 
     void cleanup_mock_mode(void) {
-        printf("===== 开始强制清理模拟文件 =====\n");
+        if (!g_mock_mode) {
+            return; // 不是模拟模式，直接退出，绝对不删文件
+        }
 
+        printf("===== 开始安全清理模拟文件 =====\n");
+
+        // 1. 生成日志文件名
         char log_file[512];
         const char *base = get_basename(g_current_vocab_file);
         char name_no_ext[256];
@@ -189,12 +193,23 @@
 
         snprintf(log_file, sizeof(log_file), "daily_review_%s.log", name_no_ext);
         printf("准备删除日志: %s\n", log_file);
-        remove(log_file);
+        remove(log_file); // 只删日志，安全
 
-        remove(g_current_vocab_file);
-        printf("已清理临时文件\n");
+        // 2. 【安全关键】只删除 包含 _mock 的模拟文件，真实文件绝对不删！
+        if (strstr(g_current_vocab_file, "_mock") != NULL) {
+            printf("准备删除模拟词库: %s\n", g_current_vocab_file);
+            remove(g_current_vocab_file);
+            printf("模拟文件已安全删除\n");
+        } else {
+            printf("不是模拟文件，跳过删除，保护真实词库！\n");
+        }
 
+        // 3. 恢复原始词库
         strcpy(g_current_vocab_file, g_original_vocab_file);
+
+        // 4. 关闭模拟模式
         g_mock_mode = 0;
         g_mock_time = 0;
+
+        printf("模拟模式已安全退出，真实词库完好无损！\n");
     }
