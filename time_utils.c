@@ -181,15 +181,29 @@
 
     void cleanup_mock_mode(void) {
         if (g_mock_mode) {
-            // 删除临时模拟词库文件
+            // 1. 删除模拟词库对应的日志文件
+            char log_file[512];
+            const char *base = strrchr(g_current_vocab_file, '\\');  // Windows
+            if (!base) base = strrchr(g_current_vocab_file, '/');    // Linux/Mac
+            if (!base) base = g_current_vocab_file;
+            else base++;
+            char name_no_ext[256];
+            strcpy(name_no_ext, base);
+            char *dot = strrchr(name_no_ext, '.');
+            if (dot) *dot = '\0';
+            snprintf(log_file, sizeof(log_file), "daily_review_%s.log", name_no_ext);
+            remove(log_file);  // 尝试删除，不存在也没关系
+
+            // 2. 删除临时模拟词库文件
             if (remove(g_current_vocab_file) == 0) {
                 printf("已清理模拟临时文件：%s\n", g_current_vocab_file);
             } else {
                 printf("警告：无法删除模拟临时文件 %s\n", g_current_vocab_file);
             }
-            // 恢复原始词库文件名（避免下次启动时路径错误）
+
+            // 3. 恢复原始词库文件名
             strcpy(g_current_vocab_file, g_original_vocab_file);
-            // 重置模拟模式标志
+            // 4. 重置模拟模式标志
             g_mock_mode = 0;
             g_mock_time = 0;
         }
