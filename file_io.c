@@ -195,22 +195,25 @@
         printf("数据备份成功！生成备份文件：%s\n", g_current_backup_vocab_file);// 提示用户数据备份成功，并显示备份文件的名称
     }
 // restore_vocab
-void restore_vocab() {// 恢复词库
+void restore_vocab() {
     clear_screen();
     set_color(COLOR_TITLE);
     printf("===================================================\n");
     printf("                     恢复词库\n");
     printf("===================================================\n");
     set_color(COLOR_DEFAULT);
+
     if (g_mock_mode) {
         printf("模拟模式下不能恢复词库，请先重置真实时间。\n");
         printf("按回车键返回...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
 
     char backup_file[50][300];
     int backup_count = 0;
+    memset(backup_file, 0, sizeof(backup_file));
 
     WIN32_FIND_DATA find_data;
     HANDLE hFind = FindFirstFile("*_backup.dat", &find_data);
@@ -227,6 +230,7 @@ void restore_vocab() {// 恢复词库
     if (backup_count == 0) {
         printf("当前目录下未找到任何备份文件！\n");
         printf("按回车键返回主菜单...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
@@ -240,52 +244,53 @@ void restore_vocab() {// 恢复词库
         if (display_name != backup_file[i]) free(display_name);
     }
     printf("==============================\n");
-    printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
 
+    printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
     char line[16];
-    if (!safe_input(line, sizeof(line))) {
+    if (!fgets(line, sizeof(line), stdin)) {
         printf("输入无效！\n");
-        printf("按回车键返回主菜单...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
+    char *newline = strchr(line, '\n');
+    if (newline) *newline = '\0';
     int choice = atoi(line);
 
-    if (choice == 0) {
-        return;
-    }
+    if (choice == 0) return;
     if (choice < 1 || choice > backup_count) {
         printf("选择无效！\n");
         printf("按回车键返回主菜单...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
 
-    char selected_backup[300];
-    strncpy(selected_backup, backup_file[choice - 1], 299);
-    selected_backup[299] = '\0';
+    char selected_backup[300] = {0};
+    strncpy(selected_backup, backup_file[choice - 1], sizeof(selected_backup) - 1);
 
-    char target_vocab[300] = {0};
-    strncpy(target_vocab, selected_backup, 255);
 
-    // 安全截取：只去掉 _backup.dat，绝不越界
-    char *p = strstr(target_vocab, "_backup.dat");
-    if (p) {
-        size_t pos = p - target_vocab;
-        target_vocab[pos] = 0;
-        strcat(target_vocab, ".dat");
+    printf("确定要恢复备份文件 %s 吗？\n这将覆盖当前词库！\n确认恢复吗?(y/n): ", selected_backup);
+    char confirm_buf[16];
+    if (!fgets(confirm_buf, sizeof(confirm_buf), stdin)) {
+        printf("输入失败！\n");
+        while (getchar() != '\n');
+        getchar();
+        return;
     }
+    char *crlf = strchr(confirm_buf, '\n');
+    if (crlf) *crlf = '\0';
+    char confirm = confirm_buf[0];
 
-    printf("确定要恢复备份文件 %s 吗？\n这将覆盖当前词库 %s 的数据！\n确认恢复吗?(y/n): ", selected_backup, target_vocab);
-    char confirm[10];
-    safe_input(confirm, sizeof(confirm));
-    if (tolower(confirm[0]) != 'y') {
+    if (tolower(confirm) != 'y') {
         printf("已取消恢复操作！\n");
         printf("按回车键返回主菜单...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
 
+    // 读取备份
     static Vocab tmp;
     memset(&tmp, 0, sizeof(Vocab));
 
@@ -293,13 +298,16 @@ void restore_vocab() {// 恢复词库
     if (!fp) {
         printf("备份文件打开失败！\n");
         printf("按回车键返回...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
+
     if (fread(&tmp, sizeof(Vocab), 1, fp) != 1) {
         printf("备份文件读取失败！\n");
         fclose(fp);
         printf("按回车键返回...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
@@ -309,17 +317,18 @@ void restore_vocab() {// 恢复词库
     if (calculate_checksum(&tmp) != tmp.checksum) {
         printf("备份文件数据损坏或被篡改！\n");
         printf("按回车键返回...");
+        while (getchar() != '\n');
         getchar();
         return;
     }
 
-    // 恢复数据，不修改文件名（避免崩溃）
     g_vocab = tmp;
     save_vocab();
 
-    printf("数据恢复成功！\n");
+    printf("✅ 数据恢复成功！\n");
     printf("已从 [%s] 恢复 %d 个单词\n", selected_backup, g_vocab.count);
     printf("按回车键返回主菜单...");
+    while (getchar() != '\n');
     getchar();
 }
 // create_new_vocab
