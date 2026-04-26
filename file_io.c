@@ -195,144 +195,133 @@
         printf("数据备份成功！生成备份文件：%s\n", g_current_backup_vocab_file);// 提示用户数据备份成功，并显示备份文件的名称
     }
 // restore_vocab
-    void restore_vocab() {// 恢复词库
-        clear_screen();
-        set_color(COLOR_TITLE);
-        printf("===================================================\n");
-        printf("                     恢复词库\n");
-        printf("===================================================\n");
-        set_color(COLOR_DEFAULT);
-        if (g_mock_mode) {
-            printf("模拟模式下不能恢复词库，请先重置真实时间。\n");
-            printf("按回车键返回...");
-            getchar();
-            return;
-        }
+void restore_vocab() {// 恢复词库
+    clear_screen();
+    set_color(COLOR_TITLE);
+    printf("===================================================\n");
+    printf("                     恢复词库\n");
+    printf("===================================================\n");
+    set_color(COLOR_DEFAULT);
+    if (g_mock_mode) {
+        printf("模拟模式下不能恢复词库，请先重置真实时间。\n");
+        printf("按回车键返回...");
+        getchar();
+        return;
+    }
 
-        char backup_file[50][300]; // 定义一个二维数组，用于存储当前目录下的备份文件名，最多支持50个文件，每个文件名最长255字符
-        int backup_count = 0; // 定义一个整数变量，用于记录当前目录下的备份文件数量
+    char backup_file[50][300];
+    int backup_count = 0;
 
-        WIN32_FIND_DATA find_data; // 定义一个WIN32_FIND_DATA结构体变量，用于存储查找文件的信息
-        HANDLE hFind = FindFirstFile("*_backup.dat", &find_data); // 查找当前目录下的所有备份文件，并将第一个找到的文件的信息存储在find_data中，返回一个句柄hFind用于后续操作
-        if (hFind != INVALID_HANDLE_VALUE) { 
-           do {
-                if (backup_count >= 50) break; // 如果文件数量超过50，停止查找
-                strncpy(backup_file[backup_count], find_data.cFileName, 299); // 将找到的备份文件名复制到backup_file数组中
-                backup_file[backup_count][299] = '\0'; // 确保字符串以null结尾，防止溢出
-                backup_count++;
-            } while (FindNextFile(hFind, &find_data));
-            FindClose(hFind); // 关闭查找句柄
-        }
-        
-        if (backup_count == 0) {
-            printf("当前目录下未找到任何备份文件！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return;
-        }
+    WIN32_FIND_DATA find_data;
+    HANDLE hFind = FindFirstFile("*_backup.dat", &find_data);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (backup_count >= 50) break;
+            strncpy(backup_file[backup_count], find_data.cFileName, 299);
+            backup_file[backup_count][299] = '\0';
+            backup_count++;
+        } while (FindNextFile(hFind, &find_data));
+        FindClose(hFind);
+    }
 
-        printf("可恢复的备份文件:\n");
-        printf("==============================\n");
-        for (int i = 0; i < backup_count; i++) {
-            char *display_name = ansi_to_utf8(backup_file[i]);
-            if (!display_name) display_name = backup_file[i];
-            printf("%d. %s\n", i + 1, display_name);
-            if (display_name != backup_file[i]) free(display_name);
-        }
-        printf("==============================\n");
-        printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
-
-        char line[16];
-        if (!safe_input(line, sizeof(line))) {
-            printf("输入无效！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return;
-        }
-        int choice = atoi(line);
-
-        if (choice == 0) {
-            return; // 用户选择返回主菜单
-        }
-        if (choice < 1 || choice > backup_count) {
-            printf("选择无效！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return; // 如果用户输入的序号无效，提示用户并返回主菜单
-        }
-        // 推算出用户选择的备份文件对应的原词库文件名(去掉"_backup.dat"后缀)
-        char selected_backup[300];
-        strncpy(selected_backup, backup_file[choice - 1], 299); // 获取用户选择的备份文件名
-        selected_backup[299] = '\0'; // 确保字符串以null结尾，防止溢出
-        
-        char target_vocab[256];
-        strncpy(target_vocab, backup_file[choice - 1], 255);
-        target_vocab[255] = '\0';
-        char *p = strstr(target_vocab, "_backup.dat");
-        if (p) {
-            strcpy(p, ".dat"); // 将"_backup.dat"替换为".dat"，得到原词库文件名
-        } else {
-            printf("备份文件名格式不正确！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return; // 如果备份文件名格式不正确，提示用户并返回主菜单
-        }
-
-        // 二次确认是否恢复
-        printf("确定要恢复备份文件 %s 吗？\n这将覆盖当前词库 %s 的数据！\n确认恢复吗?(y/n): ", selected_backup, target_vocab);
-        char confirm[10];
-        safe_input(confirm, sizeof(confirm));
-        if (tolower(confirm[0]) != 'y') {
-            printf("已取消恢复操作！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return; // 如果用户选择不确认，提示用户并返回主菜单
-        }
-
-        static Vocab tmp; // 定义一个静态变量tmp，用于保存从备份文件中读取的词库信息，静态变量在函数调用结束后仍然存在，避免了频繁的内存分配和释放
-        memset(&tmp, 0, sizeof(Vocab)); // 将tmp的内存空间清零，初始化词库信息
-
-        FILE *fp = fopen(selected_backup, "rb"); // 以二进制读取模式打开用户选择的备份文件
-        if (!fp) {
-            printf("备份文件打开失败！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return; // 如果备份文件无法打开，提示用户并返回主菜单
-        }
-        if (fread(&tmp, sizeof(Vocab), 1, fp) != 1) { // 从备份文件中读取词库信息到tmp变量中，如果读取失败，提示用户并返回主菜单
-            printf("备份文件读取失败！\n");
-            fclose(fp);
-            printf("按回车键返回主菜单...");
-            getchar();
-            return;
-        }
-        fclose(fp);
-
-        // 解密数据
-        decrypt_data(&tmp, sizeof(Vocab)); // 对从备份文件中读取的词库信息进行解密
-        if (calculate_checksum(&tmp) != tmp.checksum) { // 验证数据的完整性，如果校验和不匹配，提示用户并返回主菜单
-            printf("备份文件数据损坏或被篡改！\n");
-            printf("按回车键返回主菜单...");
-            getchar();
-            return;
-        }
-
-        // 恢复数据
-        g_vocab = tmp; // 将解密后的词库信息赋值给全局变量g_vocab，完成数据恢复
-        strncpy(g_current_vocab_file, target_vocab, 255); // 更新当前词库文件名为恢复的词库文件名
-        g_current_vocab_file[255] = '\0'; // 确保字符串以null结尾，防止溢出
-        generate_backup_filename(g_current_vocab_file, g_current_backup_vocab_file); // 根据新的当前词库文件名生成对应的备份文件名
-        g_current_backup_vocab_file[299] = '\0'; // 确保字符串以null结尾，防止溢出
-
-        save_vocab(); // 保存恢复后的词库信息到当前词库文件中
-
-        printf("数据恢复成功！\n");
-        printf("已从 [%s] 恢复 %d 个单词到 [%s]\n",
-           selected_backup, g_vocab.count, g_current_vocab_file);
-        printf("提示：原备份文件未被修改，建议在关闭程序前手动保留备份。\n");
+    if (backup_count == 0) {
+        printf("当前目录下未找到任何备份文件！\n");
         printf("按回车键返回主菜单...");
         getchar();
+        return;
     }
+
+    printf("可恢复的备份文件:\n");
+    printf("==============================\n");
+    for (int i = 0; i < backup_count; i++) {
+        char *display_name = ansi_to_utf8(backup_file[i]);
+        if (!display_name) display_name = backup_file[i];
+        printf("%d. %s\n", i + 1, display_name);
+        if (display_name != backup_file[i]) free(display_name);
+    }
+    printf("==============================\n");
+    printf("请输入序号选择要恢复的备份文件(0表示返回主菜单):");
+
+    char line[16];
+    if (!safe_input(line, sizeof(line))) {
+        printf("输入无效！\n");
+        printf("按回车键返回主菜单...");
+        getchar();
+        return;
+    }
+    int choice = atoi(line);
+
+    if (choice == 0) {
+        return;
+    }
+    if (choice < 1 || choice > backup_count) {
+        printf("选择无效！\n");
+        printf("按回车键返回主菜单...");
+        getchar();
+        return;
+    }
+
+    char selected_backup[300];
+    strncpy(selected_backup, backup_file[choice - 1], 299);
+    selected_backup[299] = '\0';
+
+    char target_vocab[300] = {0};
+    strncpy(target_vocab, selected_backup, 255);
+
+    // 安全截取：只去掉 _backup.dat，绝不越界
+    char *p = strstr(target_vocab, "_backup.dat");
+    if (p) {
+        size_t pos = p - target_vocab;
+        target_vocab[pos] = 0;
+        strcat(target_vocab, ".dat");
+    }
+
+    printf("确定要恢复备份文件 %s 吗？\n这将覆盖当前词库 %s 的数据！\n确认恢复吗?(y/n): ", selected_backup, target_vocab);
+    char confirm[10];
+    safe_input(confirm, sizeof(confirm));
+    if (tolower(confirm[0]) != 'y') {
+        printf("已取消恢复操作！\n");
+        printf("按回车键返回主菜单...");
+        getchar();
+        return;
+    }
+
+    static Vocab tmp;
+    memset(&tmp, 0, sizeof(Vocab));
+
+    FILE *fp = fopen(selected_backup, "rb");
+    if (!fp) {
+        printf("备份文件打开失败！\n");
+        printf("按回车键返回...");
+        getchar();
+        return;
+    }
+    if (fread(&tmp, sizeof(Vocab), 1, fp) != 1) {
+        printf("备份文件读取失败！\n");
+        fclose(fp);
+        printf("按回车键返回...");
+        getchar();
+        return;
+    }
+    fclose(fp);
+
+    decrypt_data(&tmp, sizeof(Vocab));
+    if (calculate_checksum(&tmp) != tmp.checksum) {
+        printf("备份文件数据损坏或被篡改！\n");
+        printf("按回车键返回...");
+        getchar();
+        return;
+    }
+
+    // 恢复数据，不修改文件名（避免崩溃）
+    g_vocab = tmp;
+    save_vocab();
+
+    printf("数据恢复成功！\n");
+    printf("已从 [%s] 恢复 %d 个单词\n", selected_backup, g_vocab.count);
+    printf("按回车键返回主菜单...");
+    getchar();
+}
 // create_new_vocab
     void create_new_vocab() {// 新建词库
         clear_screen();
