@@ -65,13 +65,9 @@
         if (choice == 5) {
             if (g_mock_mode) {
                 printf("正在退出模拟时间模式，恢复原始词库...\n");
-                if (remove(g_current_vocab_file) != 0) {
-                    printf("警告：无法删除临时文件 %s\n", g_current_vocab_file);
-                }
-                strcpy(g_current_vocab_file, g_original_vocab_file);
+
+                cleanup_mock_mode();
                 load_vocab();
-                g_mock_time = 0;
-                g_mock_mode = 0;
                 printf("已恢复真实时间模式。\n");
             } else {
                 g_mock_time = 0;
@@ -180,31 +176,25 @@
     }
 
     void cleanup_mock_mode(void) {
-        if (g_mock_mode) {
-            // 1. 删除模拟词库对应的日志文件
-            char log_file[512];
-            const char *base = strrchr(g_current_vocab_file, '\\');  // Windows
-            if (!base) base = strrchr(g_current_vocab_file, '/');    // Linux/Mac
-            if (!base) base = g_current_vocab_file;
-            else base++;
-            char name_no_ext[256];
-            strcpy(name_no_ext, base);
-            char *dot = strrchr(name_no_ext, '.');
-            if (dot) *dot = '\0';
-            snprintf(log_file, sizeof(log_file), "daily_review_%s.log", name_no_ext);
-            remove(log_file);  // 尝试删除，不存在也没关系
+        printf("===== 开始强制清理模拟文件 =====\n");
 
-            // 2. 删除临时模拟词库文件
-            if (remove(g_current_vocab_file) == 0) {
-                printf("已清理模拟临时文件：%s\n", g_current_vocab_file);
-            } else {
-                printf("警告：无法删除模拟临时文件 %s\n", g_current_vocab_file);
-            }
+        char log_file[512];
+        const char *base = get_basename(g_current_vocab_file);
+        char name_no_ext[256];
+        strncpy(name_no_ext, base, sizeof(name_no_ext)-1);
+        name_no_ext[sizeof(name_no_ext)-1] = '\0';
 
-            // 3. 恢复原始词库文件名
-            strcpy(g_current_vocab_file, g_original_vocab_file);
-            // 4. 重置模拟模式标志
-            g_mock_mode = 0;
-            g_mock_time = 0;
-        }
+        char *dot = strstr(name_no_ext, ".dat");
+        if (dot) *dot = '\0';
+
+        snprintf(log_file, sizeof(log_file), "daily_review_%s.log", name_no_ext);
+        printf("准备删除日志: %s\n", log_file);
+        remove(log_file);
+
+        remove(g_current_vocab_file);
+        printf("已清理临时文件\n");
+
+        strcpy(g_current_vocab_file, g_original_vocab_file);
+        g_mock_mode = 0;
+        g_mock_time = 0;
     }
